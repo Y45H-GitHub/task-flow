@@ -1,5 +1,5 @@
 /**
- * LogView.js — Meeting / Call / Conversation Log tab (Tab 4)
+ * LogView.js — Meeting / Call / Conversation Log tab (Tab 4 — Bento Adapter)
  */
 import { store } from '../store/store.js';
 import { formatDate, timeAgo } from '../utils/dateUtils.js';
@@ -19,7 +19,7 @@ export function mountLogView(container) {
     searchBar.className = 'log-search';
     searchBar.innerHTML = `
       <span class="log-search-icon">🔍</span>
-      <input class="form-input" id="log-search" type="text" placeholder="Search logs — person, summary, action items..." value="${escHtml(searchQuery)}" />
+      <input class="form-input" id="log-search" type="text" placeholder="Search logs by keyword, name, tag..." value="${escHtml(searchQuery)}" />
     `;
     container.appendChild(searchBar);
 
@@ -44,14 +44,12 @@ export function mountLogView(container) {
 
   function renderLogs() {
     const { logs, people } = store.state;
-    const personMap = Object.fromEntries(people.map(p => [p.id, p]));
 
-    // Remove old log list if present
-    const old = container.querySelector('.log-list');
+    const old = container.querySelector('.logs-grid');
     if (old) old.remove();
 
     const list = document.createElement('div');
-    list.className = 'log-list';
+    list.className = 'logs-grid';
 
     const q = searchQuery.toLowerCase();
     const filtered = logs.filter(l => {
@@ -66,10 +64,10 @@ export function mountLogView(container) {
 
     if (!filtered.length) {
       list.innerHTML = `
-        <div class="empty-state">
+        <div class="empty-state" style="grid-column: 1 / -1">
           <div class="empty-icon">📓</div>
-          <div class="empty-title">${q ? 'No results' : 'No log entries yet'}</div>
-          <div class="empty-sub">${q ? 'Try a different search' : 'Log meetings, calls, and conversations'}</div>
+          <div class="empty-title">${q ? 'No results found' : 'No logs recorded'}</div>
+          <div class="empty-sub">${q ? 'Refine search tags or text' : 'Log your meetings and conversations'}</div>
         </div>
       `;
       container.appendChild(list);
@@ -90,7 +88,7 @@ export function mountLogView(container) {
           <div class="log-type-icon">${icon}</div>
           <div class="log-meta">
             <div class="log-with">${escHtml(log.with || 'Unknown')}</div>
-            <div class="log-date-type">${log.type || 'Meeting'} · ${log.date ? formatDate(log.date) : formatDate(log.createdAt)} · Added ${timeAgo(log.createdAt)}</div>
+            <div class="log-date-type">${log.type || 'Meeting'} · ${log.date ? formatDate(log.date) : formatDate(log.createdAt)}</div>
           </div>
           <div class="log-actions">
             <button class="task-action-btn" data-edit="${log.id}" title="Edit">✏️</button>
@@ -132,14 +130,14 @@ export function mountLogView(container) {
       <div class="modal">
         <div class="modal-handle"></div>
         <div class="modal-header">
-          <h2 class="modal-title">${isEdit ? '✏️ Edit Log Entry' : '📓 Add Log Entry'}</h2>
+          <h2 class="modal-title">${isEdit ? '✏️ Edit Log' : '📓 Log Conversation'}</h2>
           <button class="modal-close" id="lf-close">✕</button>
         </div>
         <div class="modal-body">
           <div class="form-row">
             <div class="form-group">
               <label class="form-label">With (person/group) *</label>
-              <input class="form-input" id="lf-with" type="text" placeholder="e.g. KJ, Team, Client..." value="${escHtml(log?.with || '')}" autofocus />
+              <input class="form-input" id="lf-with" type="text" placeholder="e.g. KJ, Team sync..." value="${escHtml(log?.with || '')}" autofocus />
             </div>
             <div class="form-group">
               <label class="form-label">Type</label>
@@ -155,23 +153,23 @@ export function mountLogView(container) {
           </div>
 
           <div class="form-group">
-            <label class="form-label">Summary / What was discussed</label>
-            <textarea class="form-textarea form-input" id="lf-summary" placeholder="Key discussion points, decisions made..." rows="3">${escHtml(log?.summary || '')}</textarea>
+            <label class="form-label">Summary</label>
+            <textarea class="form-textarea form-input" id="lf-summary" placeholder="What did you align on?" rows="3">${escHtml(log?.summary || '')}</textarea>
           </div>
 
           <div class="form-group">
-            <label class="form-label">Action Items <span style="color:var(--text-muted);font-weight:400">(comma separated)</span></label>
-            <textarea class="form-textarea form-input" id="lf-actions" placeholder="Send proposal, Call back on Friday, Share files..." rows="2">${escHtml(log?.actionItems || '')}</textarea>
+            <label class="form-label">Action Items (comma separated)</label>
+            <textarea class="form-textarea form-input" id="lf-actions" placeholder="Send email follow-up, share doc..." rows="2">${escHtml(log?.actionItems || '')}</textarea>
           </div>
 
           <div class="form-group">
-            <label class="form-label">Tags <span style="color:var(--text-muted);font-weight:400">(comma separated)</span></label>
-            <input class="form-input" id="lf-tags" type="text" placeholder="e.g. project-x, urgent, followup" value="${escHtml(log?.tags || '')}" />
+            <label class="form-label">Tags (comma separated)</label>
+            <input class="form-input" id="lf-tags" type="text" placeholder="follow-up, project-a" value="${escHtml(log?.tags || '')}" />
           </div>
 
           <div class="modal-footer">
             <button class="btn btn-ghost" id="lf-cancel">Cancel</button>
-            <button class="btn btn-primary" id="lf-save">${isEdit ? '💾 Save' : '📝 Log It'}</button>
+            <button class="btn btn-primary" id="lf-save">${isEdit ? '💾 Save Changes' : '📝 Log Entry'}</button>
           </div>
         </div>
       </div>

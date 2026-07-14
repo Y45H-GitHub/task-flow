@@ -1,6 +1,5 @@
 /**
- * PeopleView.js — People tab (Tab 2)
- * Shows all tasks grouped by person.
+ * PeopleView.js — People tab (Tab 2 — Bento Grid Adapter)
  */
 import { store } from '../store/store.js';
 import { isOverdue, formatDateShort } from '../utils/dateUtils.js';
@@ -12,7 +11,7 @@ export function mountPeopleView(container) {
     const { tasks, people } = store.state;
     container.innerHTML = '';
 
-    // Add person button
+    // Add person header
     const headerRow = document.createElement('div');
     headerRow.className = 'section-header';
     headerRow.innerHTML = `
@@ -21,17 +20,18 @@ export function mountPeopleView(container) {
     `;
     container.appendChild(headerRow);
 
-    headerRow.querySelector('#add-person-btn').addEventListener('click', () => {
-      showAddPersonModal();
-    });
+    headerRow.querySelector('#add-person-btn').addEventListener('click', showAddPersonModal);
 
-    // Group tasks by person
     const pendingTasks = tasks.filter(t => t.status !== 'done');
 
     if (!people.length) {
       container.innerHTML += `<div class="empty-state"><div class="empty-icon">👥</div><div class="empty-title">No people yet</div><div class="empty-sub">Add people to tag tasks</div></div>`;
       return;
     }
+
+    // Grid container to hold person groups
+    const grid = document.createElement('div');
+    grid.className = 'people-grid';
 
     let hasAny = false;
     people.forEach((person, idx) => {
@@ -44,18 +44,18 @@ export function mountPeopleView(container) {
 
       const group = document.createElement('div');
       group.className = 'person-group animate-in';
-      group.style.animationDelay = `${idx * 50}ms`;
+      group.style.animationDelay = `${idx * 40}ms`;
 
       group.innerHTML = `
         <div class="person-group-header">
-          <div class="person-avatar" style="background:${person.color}33;color:${person.color}">
+          <div class="person-avatar" style="background:${person.color}22;color:${person.color}">
             ${person.name.slice(0, 2).toUpperCase()}
           </div>
           <div class="person-info">
             <div class="person-name">${escHtml(person.name)}</div>
-            <div class="person-task-count">${personTasks.length} pending task${personTasks.length !== 1 ? 's' : ''}</div>
+            <div class="person-task-count">${personTasks.length} task${personTasks.length !== 1 ? 's' : 's'}</div>
           </div>
-          ${person.id !== 'self' ? `<button class="btn btn-ghost" onclick="window._deletePerson('${person.id}')" style="font-size:0.75rem;padding:4px 10px">✕</button>` : ''}
+          ${person.id !== 'self' ? `<button class="btn btn-ghost" data-del="${person.id}" style="font-size:0.75rem;padding:4px 10px">✕</button>` : ''}
         </div>
         <div class="person-task-list">
           ${personTasks.map(t => `
@@ -68,32 +68,50 @@ export function mountPeopleView(container) {
         </div>
       `;
 
-      container.appendChild(group);
+      if (person.id !== 'self') {
+        group.querySelector(`[data-del="${person.id}"]`).addEventListener('click', (e) => {
+          e.stopPropagation();
+          deletePerson(person.id);
+        });
+      }
+
+      grid.appendChild(group);
     });
 
-    if (!hasAny) {
+    if (hasAny) {
+      container.appendChild(grid);
+    } else {
       const empty = document.createElement('div');
       empty.className = 'empty-state';
       empty.innerHTML = `
         <div class="empty-icon">👥</div>
-        <div class="empty-title">No pending tasks for anyone</div>
-        <div class="empty-sub">All caught up across all people!</div>
+        <div class="empty-title">All caught up!</div>
+        <div class="empty-sub">No pending tasks for anyone.</div>
       `;
       container.appendChild(empty);
     }
 
-    // Also show people with no tasks
+    // Show inactive/clear people
     const emptyPeople = people.filter(p => !pendingTasks.some(t => t.person === p.id));
     if (emptyPeople.length && hasAny) {
       const section = document.createElement('div');
-      section.innerHTML = `<div class="section-header" style="margin-top:24px"><span class="section-title">All clear ✓</span></div>`;
+      section.innerHTML = `<div class="section-header" style="margin-top:32px"><span class="section-title">All Clear ✓</span></div>`;
       const chips = document.createElement('div');
       chips.style.cssText = 'display:flex;gap:8px;flex-wrap:wrap';
       emptyPeople.forEach(p => {
-        chips.innerHTML += `<span class="person-pill" style="padding:6px 14px;font-size:0.8125rem;background:${p.color}22;color:${p.color};border:1px solid ${p.color}44">${p.name}</span>`;
+        chips.innerHTML += `<span class="person-pill" style="padding:6px 14px;font-size:0.8125rem;background:${p.color}08;color:${p.color};border:1px solid ${p.color}15">${p.name}</span>`;
       });
       section.appendChild(chips);
       container.appendChild(section);
+    }
+  }
+
+  function deletePerson(id) {
+    if (confirm('Delete this person? Their tasks will remain but become unassigned.')) {
+      store.update(s => {
+        s.tasks.forEach(t => { if (t.person === id) t.person = 'self'; });
+        s.people = s.people.filter(p => p.id !== id);
+      });
     }
   }
 
@@ -116,7 +134,7 @@ export function mountPeopleView(container) {
             <input class="form-input" id="ap-name" type="text" placeholder="e.g. Ravi, Mom, Boss..." maxlength="30" autofocus />
           </div>
           <div class="form-group">
-            <label class="form-label">Color</label>
+            <label class="form-label">Color Swatch</label>
             <div class="person-color-row" id="color-row">
               ${colors.map(c => `<div class="person-color-swatch${c === selectedColor ? ' selected' : ''}" data-color="${c}" style="background:${c}"></div>`).join('')}
             </div>
@@ -150,16 +168,6 @@ export function mountPeopleView(container) {
       close();
     };
   }
-
-  // Global delete hook
-  window._deletePerson = (id) => {
-    if (confirm('Remove this person? Their tasks will remain but become unassigned.')) {
-      store.update(s => {
-        s.tasks.forEach(t => { if (t.person === id) t.person = 'self'; });
-        s.people = s.people.filter(p => p.id !== id);
-      });
-    }
-  };
 
   const unsub = store.subscribe(render);
   render();

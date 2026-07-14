@@ -1,6 +1,6 @@
 /**
- * app.js — FlowTask Root App Controller
- * Handles: tab navigation, FAB, header stats, PWA registration, toast system
+ * app.js — FlowTask Root App Controller (Bento Pivot)
+ * Handles: tab navigation (sidebar + bottom nav), FAB, header stats, PWA, toast system
  */
 import { store } from './store/store.js';
 import { mountTasksView } from './components/TasksView.js';
@@ -42,16 +42,33 @@ export function initApp(root) {
 
 function buildShell() {
   return `
-    <!-- Header -->
-    <header class="app-header">
-      <div class="app-logo">
+    <!-- Desktop Left Sidebar -->
+    <aside class="desktop-sidebar" role="navigation" aria-label="Sidebar navigation">
+      <div class="sidebar-logo">
         <div class="app-logo-icon">✨</div>
         <span class="app-logo-text">FlowTask</span>
+      </div>
+      <div class="sidebar-nav">
+        ${TABS.map(t => `
+          <button class="sidebar-item" data-tab="${t.id}" id="side-${t.id}" role="tab" aria-selected="false">
+            <span class="sidebar-icon">${t.icon}</span>
+            <span class="sidebar-label">${t.label}</span>
+          </button>
+        `).join('')}
+      </div>
+    </aside>
+
+    <!-- Top Header -->
+    <header class="app-header">
+      <div class="app-logo">
+        <!-- Show logo only on mobile/tablet header (sidebar handles desktop) -->
+        <div class="app-logo-icon" style="display: var(--display-mobile-logo, inline-flex)">✨</div>
+        <span class="app-logo-text" style="display: var(--display-mobile-logo, inline-flex)">FlowTask</span>
       </div>
       <div class="app-header-right" id="header-stats"></div>
     </header>
 
-    <!-- Tab content -->
+    <!-- Tab panes -->
     <main class="tab-content">
       ${TABS.map(t => `
         <section class="tab-pane" id="pane-${t.id}" role="tabpanel" aria-label="${t.label}">
@@ -62,8 +79,8 @@ function buildShell() {
     <!-- FAB -->
     <button class="fab" id="fab" aria-label="Add new task" title="Add task">+</button>
 
-    <!-- Bottom Nav -->
-    <nav class="bottom-nav" role="navigation" aria-label="Main navigation">
+    <!-- Bottom Nav (Mobile) -->
+    <nav class="bottom-nav" role="navigation" aria-label="Bottom navigation">
       ${TABS.map(t => `
         <button class="nav-item" data-tab="${t.id}" id="nav-${t.id}" role="tab" aria-selected="false">
           <span class="nav-icon">${t.icon}</span>
@@ -72,13 +89,19 @@ function buildShell() {
       `).join('')}
     </nav>
 
-    <!-- Toast container -->
+    <!-- Toast Container -->
     <div class="toast-container" id="toast-container" aria-live="polite"></div>
   `;
 }
 
 function bindNav() {
+  // Mobile bottom nav clicks
   document.querySelectorAll('.nav-item').forEach(btn => {
+    btn.addEventListener('click', () => switchTab(btn.dataset.tab));
+  });
+
+  // Desktop sidebar nav clicks
+  document.querySelectorAll('.sidebar-item').forEach(btn => {
     btn.addEventListener('click', () => switchTab(btn.dataset.tab));
   });
 }
@@ -91,7 +114,6 @@ function bindFAB() {
       onSave: (data) => {
         store.addTask(data);
         showToast('✅ Task added!', 'success');
-        // Refresh tasks view if mounted
         if (_mounted.tasks?.refresh) _mounted.tasks.refresh();
       },
     });
@@ -99,22 +121,28 @@ function bindFAB() {
 }
 
 function switchTab(tabId) {
-  if (tabId === _activeTab && _mounted[tabId]) return;
   _activeTab = tabId;
 
-  // Update nav
+  // Update mobile bottom nav items
   document.querySelectorAll('.nav-item').forEach(btn => {
     const active = btn.dataset.tab === tabId;
     btn.classList.toggle('active', active);
     btn.setAttribute('aria-selected', active);
   });
 
-  // Show/hide panes
+  // Update desktop sidebar items
+  document.querySelectorAll('.sidebar-item').forEach(btn => {
+    const active = btn.dataset.tab === tabId;
+    btn.classList.toggle('active', active);
+    btn.setAttribute('aria-selected', active);
+  });
+
+  // Show active pane
   document.querySelectorAll('.tab-pane').forEach(pane => {
     pane.classList.toggle('active', pane.id === `pane-${tabId}`);
   });
 
-  // Mount if not already mounted
+  // Lazy mount tab view
   if (!_mounted[tabId]) {
     const pane = document.getElementById(`pane-${tabId}`);
     const mounter = MOUNTERS[tabId];
@@ -123,12 +151,19 @@ function switchTab(tabId) {
     }
   }
 
-  // Show/hide FAB — only on tasks tab
+  // Hide FAB except on Tasks tab
   const fab = document.getElementById('fab');
   if (fab) fab.style.display = tabId === 'tasks' ? 'flex' : 'none';
 
-  // Scroll to top
-  window.scrollTo({ top: 0, behavior: 'smooth' });
+  // Smooth scroll main pane to top
+  const mainPane = document.getElementById(`pane-${tabId}`);
+  if (mainPane) {
+    if (window.innerWidth >= 1024) {
+      document.querySelector('.tab-content').scrollTo({ top: 0, behavior: 'smooth' });
+    } else {
+      window.scrollTo({ top: 0, behavior: 'smooth' });
+    }
+  }
 }
 
 function updateHeaderStats() {
@@ -141,7 +176,7 @@ function updateHeaderStats() {
   statsEl.innerHTML = `
     <div class="stat-chip">
       <span>${pending}</span>
-      <span class="stat-num" style="color:var(--text-primary)">pending</span>
+      <span class="stat-num">pending</span>
     </div>
     ${overdue > 0 ? `<div class="stat-chip overdue"><span>⚠️</span><span class="stat-num">${overdue} overdue</span></div>` : ''}
   `;
@@ -149,11 +184,10 @@ function updateHeaderStats() {
 
 function registerPWA() {
   if ('serviceWorker' in navigator) {
-    navigator.serviceWorker.register('./sw.js').catch(() => {/* ignore in dev */});
+    navigator.serviceWorker.register('./sw.js').catch(() => {/* dev ignore */});
   }
 }
 
-// ── Toast system (exported for use by child components) ──
 export function showToast(message, type = 'info') {
   const container = document.getElementById('toast-container');
   if (!container) return;

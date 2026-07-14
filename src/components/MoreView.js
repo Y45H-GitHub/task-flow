@@ -1,5 +1,5 @@
 /**
- * MoreView.js — Settings / Export tab (Tab 5)
+ * MoreView.js — Settings / Export tab (Tab 5 — Bento Adapter)
  */
 import { store } from '../store/store.js';
 import { exportTasksCSV, pendingToText, copyToClipboard } from '../utils/exportUtils.js';
@@ -18,10 +18,10 @@ export function mountMoreView(container) {
     const logCount = logs.length;
 
     container.innerHTML = `
-      <!-- Stats -->
-      <div class="stats-grid">
+      <!-- Stats (Adapts to single line on desktop) -->
+      <div class="stats-grid animate-in">
         <div class="stat-card">
-          <div class="stat-value" style="color:#a5b4fc">${total}</div>
+          <div class="stat-value" style="color:#818cf8">${total}</div>
           <div class="stat-label">Total Tasks</div>
         </div>
         <div class="stat-card">
@@ -29,100 +29,104 @@ export function mountMoreView(container) {
           <div class="stat-label">Pending</div>
         </div>
         <div class="stat-card">
-          <div class="stat-value" style="color:#4ade80">${done}</div>
+          <div class="stat-value" style="color:#10b981">${done}</div>
           <div class="stat-label">Done</div>
         </div>
         <div class="stat-card">
-          <div class="stat-value" style="color:#f87171">${overdue}</div>
+          <div class="stat-value" style="color:#ef4444">${overdue}</div>
           <div class="stat-label">Overdue</div>
         </div>
         <div class="stat-card">
-          <div class="stat-value" style="color:#fbbf24">${withLoc}</div>
+          <div class="stat-value" style="color:#f59e0b">${withLoc}</div>
           <div class="stat-label">📍 Location</div>
         </div>
         <div class="stat-card">
-          <div class="stat-value" style="color:#a5b4fc">${logCount}</div>
-          <div class="stat-label">Log Entries</div>
+          <div class="stat-value" style="color:#a78bfa">${logCount}</div>
+          <div class="stat-label">Logs</div>
         </div>
       </div>
 
-      <!-- Export section -->
-      <div class="more-section">
-        <div class="more-section-title">Export & Share</div>
+      <!-- Bento Grid for settings columns -->
+      <div class="more-dashboard-grid animate-in" style="animation-delay: 50ms">
+        <!-- Export block -->
+        <div class="more-section">
+          <div class="more-section-title">Export & Share</div>
 
-        <div class="more-item" id="export-csv">
-          <div class="more-item-icon" style="background:rgba(34 197 94/0.12)">📊</div>
-          <div class="more-item-text">
-            <div class="more-item-title">Export to CSV</div>
-            <div class="more-item-sub">Download all ${total} tasks as a spreadsheet</div>
+          <div class="more-item" id="export-csv">
+            <div class="more-item-icon" style="background:rgba(16, 185, 129, 0.08)">📊</div>
+            <div class="more-item-text">
+              <div class="more-item-title">Export to CSV</div>
+              <div class="more-item-sub">Download all ${total} tasks as a spreadsheet</div>
+            </div>
+            <span class="more-item-arrow">→</span>
           </div>
-          <span class="more-item-arrow">→</span>
+
+          <div class="more-item" id="copy-pending">
+            <div class="more-item-icon" style="background:rgba(79, 70, 229, 0.08)">📋</div>
+            <div class="more-item-text">
+              <div class="more-item-title">Copy Pending List</div>
+              <div class="more-item-sub">Copy ${pending} pending tasks to paste in WhatsApp</div>
+            </div>
+            <span class="more-item-arrow">→</span>
+          </div>
         </div>
 
-        <div class="more-item" id="copy-pending">
-          <div class="more-item-icon" style="background:rgba(99 102 241/0.12)">📋</div>
-          <div class="more-item-text">
-            <div class="more-item-title">Copy Pending List</div>
-            <div class="more-item-sub">Copy ${pending} pending tasks — paste in WhatsApp/Notes</div>
+        <!-- Manage data block -->
+        <div class="more-section">
+          <div class="more-section-title">Manage Data</div>
+
+          <div class="more-item" id="clear-done">
+            <div class="more-item-icon" style="background:rgba(239, 68, 68, 0.08)">🗑</div>
+            <div class="more-item-text">
+              <div class="more-item-title">Clear Completed Tasks</div>
+              <div class="more-item-sub">Remove ${done} completed task${done !== 1 ? 's' : ''}</div>
+            </div>
+            <span class="more-item-arrow">→</span>
           </div>
-          <span class="more-item-arrow">→</span>
-        </div>
-      </div>
 
-      <!-- Manage section -->
-      <div class="more-section">
-        <div class="more-section-title">Manage Data</div>
-
-        <div class="more-item" id="clear-done">
-          <div class="more-item-icon" style="background:rgba(239 68 68/0.1)">🗑</div>
-          <div class="more-item-text">
-            <div class="more-item-title">Clear Completed Tasks</div>
-            <div class="more-item-sub">Remove ${done} completed task${done !== 1 ? 's' : ''} to declutter</div>
+          <div class="more-item" id="export-json">
+            <div class="more-item-icon" style="background:rgba(59, 130, 246, 0.08)">💾</div>
+            <div class="more-item-text">
+              <div class="more-item-title">Export Full Backup</div>
+              <div class="more-item-sub">All data as a portable backup JSON file</div>
+            </div>
+            <span class="more-item-arrow">→</span>
           </div>
-          <span class="more-item-arrow">→</span>
-        </div>
 
-        <div class="more-item" id="export-json">
-          <div class="more-item-icon" style="background:rgba(59 130 246/0.1)">💾</div>
-          <div class="more-item-text">
-            <div class="more-item-title">Export Full Backup (JSON)</div>
-            <div class="more-item-sub">Tasks, logs, people, items — everything</div>
+          <div class="more-item" id="import-json">
+            <div class="more-item-icon" style="background:rgba(124, 58, 237, 0.08)">📥</div>
+            <div class="more-item-text">
+              <div class="more-item-title">Import Backup</div>
+              <div class="more-item-sub">Restore tasks, logs, and items from JSON backup</div>
+            </div>
+            <span class="more-item-arrow">→</span>
           </div>
-          <span class="more-item-arrow">→</span>
         </div>
 
-        <div class="more-item" id="import-json">
-          <div class="more-item-icon" style="background:rgba(139 92 246/0.1)">📥</div>
-          <div class="more-item-text">
-            <div class="more-item-title">Import from Backup</div>
-            <div class="more-item-sub">Restore a JSON backup file</div>
-          </div>
-          <span class="more-item-arrow">→</span>
-        </div>
-      </div>
-
-      <!-- About section -->
-      <div class="more-section">
-        <div class="more-section-title">About FlowTask</div>
-        <div style="padding:16px 20px">
-          <div style="font-size:0.875rem;color:var(--text-secondary);line-height:1.8">
-            <strong style="color:var(--text-primary)">FlowTask v2.0</strong> — Built for the features every task app is missing.<br><br>
-            ✅ Created timestamp on every task<br>
-            📍 Location triggers by store type<br>
-            🔥 Aging alerts (7+ days pending)<br>
-            ⚠️ Overdue indicators<br>
-            👥 Per-person task view for meetings<br>
-            📓 Meeting &amp; call log with action items<br>
-            🗃 Physical item locator<br>
-            ⚡ Quick wins filter (2-min tasks)<br>
-            📊 CSV export &amp; WhatsApp copy<br>
-            📡 PWA — installable &amp; offline-ready
+        <!-- About block (spans full width on desktop) -->
+        <div class="more-section more-about-card">
+          <div class="more-section-title">About FlowTask</div>
+          <div style="padding:20px 24px">
+            <div style="font-size:0.875rem;color:var(--text-secondary);line-height:1.8">
+              <strong style="color:var(--text-primary)">FlowTask v2.0</strong> — Designed around the gaps in standard productivity tools.<br><br>
+              <div style="display:grid;grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));gap: 12px;margin-top:8px">
+                <div>✅ <strong>Created timestamp</strong> on every task</div>
+                <div>📍 <strong>Location triggers</strong> by store type</div>
+                <div>🔥 <strong>Aging alerts</strong> (7+ days pending)</div>
+                <div>⚠️ <strong>Overdue indicators</strong> for deadlines</div>
+                <div>👥 <strong>Per-person tasks</strong> for meeting prep</div>
+                <div>📓 <strong>Meeting &amp; conversation logs</strong></div>
+                <div>🗃 <strong>Physical item locator</strong> memory</div>
+                <div>⚡ <strong>Quick wins</strong> &amp; effort tags</div>
+                <div>📡 <strong>PWA support</strong>: offline &amp; installable</div>
+              </div>
+            </div>
           </div>
         </div>
       </div>
     `;
 
-    // Bind actions
+    // Bind click events
     container.querySelector('#export-csv').addEventListener('click', () => {
       try {
         exportTasksCSV(tasks, people);
@@ -142,7 +146,7 @@ export function mountMoreView(container) {
       if (done === 0) { showToast('No completed tasks to clear.', 'info'); return; }
       if (confirm(`Remove ${done} completed task${done !== 1 ? 's' : ''}? This cannot be undone.`)) {
         store.clearCompleted();
-        showToast(`🗑 Cleared ${done} completed task${done !== 1 ? 's' : ''}.`, 'success');
+        showToast(`🗑 Cleared ${done} completed tasks.`, 'success');
       }
     });
 
@@ -179,7 +183,7 @@ export function mountMoreView(container) {
               s.items  = data.items  || [];
               s.people = data.people || [];
             });
-            showToast('✅ Data imported successfully!', 'success');
+            showToast('✅ Data restored!', 'success');
           }
         } catch { showToast('Invalid backup file.', 'error'); }
       });
