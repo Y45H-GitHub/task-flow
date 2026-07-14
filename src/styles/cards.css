@@ -1,0 +1,307 @@
+/* ============================================================
+   FlowTask — Task Card Styles
+   ============================================================ */
+
+.tasks-toolbar {
+  display: flex;
+  flex-direction: column;
+  gap: var(--sp-3);
+  margin-bottom: var(--sp-4);
+}
+
+.tasks-filter-row {
+  display: flex;
+  gap: var(--sp-2);
+  flex-wrap: wrap;
+}
+
+.filter-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  padding: 5px 12px;
+  border-radius: var(--r-full);
+  font-size: 0.75rem;
+  font-weight: 600;
+  border: 1px solid var(--border);
+  background: var(--bg-glass);
+  color: var(--text-secondary);
+  cursor: pointer;
+  transition: all var(--t-fast);
+  white-space: nowrap;
+}
+.filter-chip:hover {
+  border-color: var(--border-hover);
+  color: var(--text-primary);
+  background: var(--bg-card-hover);
+}
+.filter-chip.active {
+  background: var(--accent-light);
+  border-color: var(--border-accent);
+  color: #a5b4fc;
+}
+
+.tasks-sort-row {
+  display: flex;
+  align-items: center;
+  gap: var(--sp-2);
+}
+
+.sort-label {
+  font-size: 0.75rem;
+  color: var(--text-muted);
+  font-weight: 500;
+  flex-shrink: 0;
+}
+
+.sort-btn {
+  padding: 4px 10px;
+  border-radius: var(--r-full);
+  font-size: 0.75rem;
+  font-weight: 500;
+  border: 1px solid var(--border);
+  background: transparent;
+  color: var(--text-muted);
+  cursor: pointer;
+  transition: all var(--t-fast);
+}
+.sort-btn:hover { color: var(--text-secondary); border-color: var(--border-hover); }
+.sort-btn.active { color: #a5b4fc; border-color: var(--border-accent); background: var(--accent-light); }
+
+.jump-btns {
+  display: flex;
+  gap: var(--sp-2);
+  margin-left: auto;
+}
+
+/* ── Task list ── */
+.task-list {
+  display: flex;
+  flex-direction: column;
+  gap: var(--sp-3);
+}
+
+/* ── Task Card ── */
+.task-card {
+  background: var(--bg-card);
+  border: 1px solid var(--border);
+  border-radius: var(--r-lg);
+  padding: var(--sp-4);
+  display: flex;
+  gap: var(--sp-3);
+  transition: all var(--t-base);
+  animation: slide-up var(--t-base) forwards;
+  position: relative;
+  overflow: hidden;
+}
+
+.task-card::before {
+  content: '';
+  position: absolute;
+  left: 0;
+  top: 0;
+  bottom: 0;
+  width: 3px;
+  border-radius: var(--r-sm) 0 0 var(--r-sm);
+}
+
+.task-card[data-priority="P1"]::before { background: var(--p1); }
+.task-card[data-priority="P2"]::before { background: var(--p2); }
+.task-card[data-priority="P3"]::before { background: var(--p3); }
+.task-card[data-priority="P4"]::before { background: var(--p4); }
+
+.task-card:hover {
+  background: var(--bg-card-hover);
+  border-color: var(--border-hover);
+  transform: translateY(-1px);
+  box-shadow: var(--shadow-card);
+}
+
+.task-card.done {
+  opacity: 0.55;
+}
+.task-card.done .task-title {
+  text-decoration: line-through;
+  color: var(--text-muted);
+}
+
+.task-card.overdue {
+  border-color: rgba(239 68 68 / 0.25);
+}
+.task-card.overdue::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  background: rgba(239 68 68 / 0.03);
+  pointer-events: none;
+}
+
+/* Checkbox */
+.task-check {
+  width: 20px;
+  height: 20px;
+  border-radius: 50%;
+  border: 2px solid var(--border-hover);
+  flex-shrink: 0;
+  margin-top: 2px;
+  cursor: pointer;
+  transition: all var(--t-fast);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: transparent;
+  font-size: 0.75rem;
+  background: transparent;
+}
+.task-check:hover {
+  border-color: var(--accent);
+  background: var(--accent-light);
+  color: var(--accent);
+}
+.task-card.done .task-check {
+  background: var(--status-done);
+  border-color: var(--status-done);
+  color: white;
+}
+
+/* Body */
+.task-body { flex: 1; min-width: 0; }
+
+.task-title-row {
+  display: flex;
+  align-items: flex-start;
+  gap: var(--sp-2);
+  flex-wrap: wrap;
+  margin-bottom: var(--sp-2);
+}
+
+.task-title {
+  font-size: 0.9375rem;
+  font-weight: 600;
+  line-height: 1.4;
+  color: var(--text-primary);
+  flex: 1;
+  min-width: 0;
+}
+
+.task-flags {
+  display: flex;
+  gap: 4px;
+  flex-shrink: 0;
+}
+
+.flag-aging {
+  font-size: 0.875rem;
+  title-attrs: 'Pending 7+ days';
+}
+
+.task-notes {
+  font-size: 0.8125rem;
+  color: var(--text-secondary);
+  line-height: 1.5;
+  margin-bottom: var(--sp-3);
+  white-space: pre-wrap;
+}
+
+.task-meta {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--sp-2);
+  align-items: center;
+}
+
+.task-meta-item {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  font-size: 0.75rem;
+  color: var(--text-muted);
+}
+
+.task-meta-item .icon { font-size: 0.875rem; }
+
+.task-due-overdue {
+  color: #f87171 !important;
+  font-weight: 600;
+}
+
+/* Timestamp row */
+.task-timestamp {
+  font-size: 0.6875rem;
+  color: var(--text-muted);
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  margin-top: var(--sp-2);
+}
+
+/* Actions */
+.task-actions {
+  display: flex;
+  flex-direction: column;
+  gap: var(--sp-1);
+  flex-shrink: 0;
+}
+
+.task-action-btn {
+  width: 28px;
+  height: 28px;
+  border-radius: var(--r-sm);
+  border: none;
+  background: transparent;
+  color: var(--text-muted);
+  font-size: 0.875rem;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: all var(--t-fast);
+}
+.task-action-btn:hover {
+  background: var(--bg-card-hover);
+  color: var(--text-primary);
+}
+.task-action-btn.delete:hover {
+  background: rgba(239 68 68 / 0.15);
+  color: #f87171;
+}
+
+/* Person avatar pill */
+.person-pill {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  padding: 2px 8px;
+  border-radius: var(--r-full);
+  font-size: 0.6875rem;
+  font-weight: 700;
+  border: 1px solid transparent;
+}
+
+/* ── Location badge ── */
+.location-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  padding: 2px 8px;
+  border-radius: var(--r-full);
+  font-size: 0.6875rem;
+  font-weight: 600;
+  background: rgba(245 158 11 / 0.12);
+  color: #fbbf24;
+  border: 1px solid rgba(245 158 11 / 0.25);
+}
+
+/* Effort badge */
+.effort-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 3px;
+  padding: 2px 7px;
+  border-radius: var(--r-full);
+  font-size: 0.6875rem;
+  font-weight: 600;
+  background: rgba(99 102 241 / 0.1);
+  color: #818cf8;
+  border: 1px solid rgba(99 102 241 / 0.2);
+}
