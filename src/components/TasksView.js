@@ -1,20 +1,20 @@
 /**
- * TasksView.js — Main Tasks tab (Tab 1)
+ * TasksView.js — Main Tasks tab (Tab 1 — Unicons Adapter)
  */
 import { store } from '../store/store.js';
 import { createTaskCard } from './TaskCard.js';
 import { openTaskForm } from './TaskForm.js';
-import { isOverdue, isAging, today } from '../utils/dateUtils.js';
+import { isOverdue, today } from '../utils/dateUtils.js';
 
 const FILTERS = [
-  { id: 'all',       label: '📋 All' },
-  { id: 'pending',   label: '⏳ Pending' },
-  { id: 'today',     label: '📅 Today' },
-  { id: 'overdue',   label: '⚠️ Overdue' },
-  { id: 'location',  label: '📍 Location' },
-  { id: 'quickwin',  label: '⚡ Quick Wins' },
-  { id: 'waiting',   label: '🔄 Waiting' },
-  { id: 'done',      label: '✅ Done' },
+  { id: 'all',       label: 'All',        icon: 'uil-clipboard-notes' },
+  { id: 'pending',   label: 'Pending',    icon: 'uil-clock' },
+  { id: 'today',     label: 'Today',      icon: 'uil-calender' },
+  { id: 'overdue',   label: 'Overdue',    icon: 'uil-exclamation-triangle' },
+  { id: 'location',  label: 'Location',   icon: 'uil-map-marker' },
+  { id: 'quickwin',  label: 'Quick Wins', icon: 'uil-bolt' },
+  { id: 'waiting',   label: 'Waiting',    icon: 'uil-history' },
+  { id: 'done',      label: 'Done',       icon: 'uil-check-circle' },
 ];
 
 const SORTS = [
@@ -37,8 +37,8 @@ export function mountTasksView(container) {
         <span class="sort-label">Sort:</span>
         <div id="sort-row" style="display:flex;gap:6px;flex-wrap:wrap"></div>
         <div class="jump-btns">
-          <button class="btn btn-ghost btn-icon" id="jump-top" title="Jump to first" style="font-size:0.875rem">⬆</button>
-          <button class="btn btn-ghost btn-icon" id="jump-bottom" title="Jump to last" style="font-size:0.875rem">⬇</button>
+          <button class="btn btn-ghost btn-icon" id="jump-top" title="Jump to first" style="font-size:0.875rem"><i class="uil uil-arrow-up"></i></button>
+          <button class="btn btn-ghost btn-icon" id="jump-bottom" title="Jump to last" style="font-size:0.875rem"><i class="uil uil-arrow-down"></i></button>
         </div>
       </div>
     </div>
@@ -51,7 +51,7 @@ export function mountTasksView(container) {
     const chip = document.createElement('button');
     chip.className = `filter-chip${f.id === _activeFilter ? ' active' : ''}`;
     chip.dataset.filter = f.id;
-    chip.textContent = f.label;
+    chip.innerHTML = `<i class="uil ${f.icon}" style="margin-right:3px"></i> ${f.label}`;
     chip.addEventListener('click', () => {
       _activeFilter = f.id;
       filterRow.querySelectorAll('.filter-chip').forEach(c => c.classList.toggle('active', c.dataset.filter === f.id));
@@ -98,7 +98,7 @@ export function mountTasksView(container) {
     if (!filtered.length) {
       list.innerHTML = `
         <div class="empty-state">
-          <div class="empty-icon">${emptyIcon(_activeFilter)}</div>
+          <div class="empty-icon"><i class="uil ${emptyIcon(_activeFilter)}"></i></div>
           <div class="empty-title">${emptyTitle(_activeFilter)}</div>
           <div class="empty-sub">Tap + to add a task</div>
         </div>`;
@@ -116,7 +116,6 @@ export function mountTasksView(container) {
     });
   }
 
-  // Subscribe to store changes
   const unsub = store.subscribe(() => render());
   render();
 
@@ -142,13 +141,21 @@ function applySort(tasks, sort) {
     case 'due':      return clone.sort((a, b) => (a.dueDate || '9') < (b.dueDate || '9') ? -1 : 1);
     case 'priority': return clone.sort((a, b) => (PRIORITY_ORDER[a.priority] || 5) - (PRIORITY_ORDER[b.priority] || 5));
     case 'person':   return clone.sort((a, b) => (a.person || '').localeCompare(b.person || ''));
-    default:         return clone; // 'added' — already newest first
+    default:         return clone; // 'added'
   }
 }
 
 function emptyIcon(filter) {
-  const map = { pending: '✅', today: '📅', overdue: '🎉', location: '📍', quickwin: '⚡', waiting: '⏳', done: '✅' };
-  return map[filter] || '📋';
+  const map = { 
+    pending: 'uil-check-circle', 
+    today: 'uil-calender', 
+    overdue: 'uil-smile', 
+    location: 'uil-map-marker-slash', 
+    quickwin: 'uil-bolt-alt', 
+    waiting: 'uil-history-alt', 
+    done: 'uil-check-circle' 
+  };
+  return map[filter] || 'uil-clipboard-notes';
 }
 
 function emptyTitle(filter) {

@@ -17,6 +17,7 @@
 - No inline styles in JS — add a class and style it in CSS
 - Dark mode is the only mode (no light mode toggle)
 - Animations use `transition` or `@keyframes` — never JS-based timers for visual effects
+- No emojis for primary UI elements or navigation. Use Unicons (or similar SVG/webfont line icon packs) with clean, consistent vector aesthetics.
 
 ## Data Conventions
 - Task schema: `{ id, title, notes, createdAt, dueDate, priority, effort, person, status, category, locationTrigger, completedAt }`

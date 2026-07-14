@@ -1,5 +1,5 @@
 /**
- * MoreView.js — Settings / Export tab (Tab 5 — Bento Adapter)
+ * MoreView.js — Settings / Export tab (Tab 5 — Unicons Adapter)
  */
 import { store } from '../store/store.js';
 import { exportTasksCSV, pendingToText, copyToClipboard } from '../utils/exportUtils.js';
@@ -53,7 +53,7 @@ export function mountMoreView(container) {
           <div class="more-section-title">Export & Share</div>
 
           <div class="more-item" id="export-csv">
-            <div class="more-item-icon" style="background:rgba(16, 185, 129, 0.08)">📊</div>
+            <div class="more-item-icon" style="background:rgba(16, 185, 129, 0.08);color:#10b981"><i class="uil uil-file-share-alt"></i></div>
             <div class="more-item-text">
               <div class="more-item-title">Export to CSV</div>
               <div class="more-item-sub">Download all ${total} tasks as a spreadsheet</div>
@@ -62,7 +62,7 @@ export function mountMoreView(container) {
           </div>
 
           <div class="more-item" id="copy-pending">
-            <div class="more-item-icon" style="background:rgba(79, 70, 229, 0.08)">📋</div>
+            <div class="more-item-icon" style="background:rgba(79, 70, 229, 0.08);color:#818cf8"><i class="uil uil-copy"></i></div>
             <div class="more-item-text">
               <div class="more-item-title">Copy Pending List</div>
               <div class="more-item-sub">Copy ${pending} pending tasks to paste in WhatsApp</div>
@@ -76,7 +76,7 @@ export function mountMoreView(container) {
           <div class="more-section-title">Manage Data</div>
 
           <div class="more-item" id="clear-done">
-            <div class="more-item-icon" style="background:rgba(239, 68, 68, 0.08)">🗑</div>
+            <div class="more-item-icon" style="background:rgba(239, 68, 68, 0.08);color:#f87171"><i class="uil uil-trash-alt"></i></div>
             <div class="more-item-text">
               <div class="more-item-title">Clear Completed Tasks</div>
               <div class="more-item-sub">Remove ${done} completed task${done !== 1 ? 's' : ''}</div>
@@ -85,7 +85,7 @@ export function mountMoreView(container) {
           </div>
 
           <div class="more-item" id="export-json">
-            <div class="more-item-icon" style="background:rgba(59, 130, 246, 0.08)">💾</div>
+            <div class="more-item-icon" style="background:rgba(59, 130, 246, 0.08);color:#3b82f6"><i class="uil uil-save"></i></div>
             <div class="more-item-text">
               <div class="more-item-title">Export Full Backup</div>
               <div class="more-item-sub">All data as a portable backup JSON file</div>
@@ -94,7 +94,7 @@ export function mountMoreView(container) {
           </div>
 
           <div class="more-item" id="import-json">
-            <div class="more-item-icon" style="background:rgba(124, 58, 237, 0.08)">📥</div>
+            <div class="more-item-icon" style="background:rgba(124, 58, 237, 0.08);color:#8b5cf6"><i class="uil uil-import"></i></div>
             <div class="more-item-text">
               <div class="more-item-title">Import Backup</div>
               <div class="more-item-sub">Restore tasks, logs, and items from JSON backup</div>
@@ -110,15 +110,15 @@ export function mountMoreView(container) {
             <div style="font-size:0.875rem;color:var(--text-secondary);line-height:1.8">
               <strong style="color:var(--text-primary)">FlowTask v2.0</strong> — Designed around the gaps in standard productivity tools.<br><br>
               <div style="display:grid;grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));gap: 12px;margin-top:8px">
-                <div>✅ <strong>Created timestamp</strong> on every task</div>
-                <div>📍 <strong>Location triggers</strong> by store type</div>
-                <div>🔥 <strong>Aging alerts</strong> (7+ days pending)</div>
-                <div>⚠️ <strong>Overdue indicators</strong> for deadlines</div>
-                <div>👥 <strong>Per-person tasks</strong> for meeting prep</div>
-                <div>📓 <strong>Meeting &amp; conversation logs</strong></div>
-                <div>🗃 <strong>Physical item locator</strong> memory</div>
-                <div>⚡ <strong>Quick wins</strong> &amp; effort tags</div>
-                <div>📡 <strong>PWA support</strong>: offline &amp; installable</div>
+                <div><i class="uil uil-history" style="color:var(--accent);margin-right:2px"></i> <strong>Created timestamp</strong> on tasks</div>
+                <div><i class="uil uil-map-marker" style="color:var(--accent);margin-right:2px"></i> <strong>Location triggers</strong> by type</div>
+                <div><i class="uil uil-fire" style="color:var(--accent);margin-right:2px"></i> <strong>Aging alerts</strong> (7+ days)</div>
+                <div><i class="uil uil-exclamation-triangle" style="color:var(--accent);margin-right:2px"></i> <strong>Overdue indicators</strong></div>
+                <div><i class="uil uil-users-alt" style="color:var(--accent);margin-right:2px"></i> <strong>Per-person tasks</strong> for meetings</div>
+                <div><i class="uil uil-book-open" style="color:var(--accent);margin-right:2px"></i> <strong>Conversation logs</strong></div>
+                <div><i class="uil uil-box" style="color:var(--accent);margin-right:2px"></i> <strong>Physical item memory</strong></div>
+                <div><i class="uil uil-bolt" style="color:var(--accent);margin-right:2px"></i> <strong>Quick wins</strong> (2-min tasks)</div>
+                <div><i class="uil uil-rss" style="color:var(--accent);margin-right:2px"></i> <strong>PWA support</strong> &amp; offline</div>
               </div>
             </div>
           </div>

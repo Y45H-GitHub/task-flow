@@ -1,5 +1,5 @@
 /**
- * TaskForm.js — Add/Edit Task Modal (bottom sheet)
+ * TaskForm.js — Add/Edit Task Modal (bottom sheet — Unicons Adapter)
  */
 import { PLACE_TYPES } from '../utils/locationUtils.js';
 import { today } from '../utils/dateUtils.js';
@@ -8,7 +8,7 @@ const PRIORITIES = ['P1', 'P2', 'P3', 'P4'];
 const STATUSES   = ['todo', 'inprogress', 'waiting', 'blocked', 'done'];
 const STATUS_LABELS = { todo: 'To Do', inprogress: 'In Progress', waiting: 'Waiting', blocked: 'Blocked', done: 'Done' };
 const EFFORTS   = ['2min', '15min', '1hr', 'half-day', 'full-day'];
-const EFFORT_LABELS = { '2min': '⚡ 2 min', '15min': '🕐 15 min', '1hr': '⏱ 1 hr', 'half-day': '🌤 Half day', 'full-day': '📅 Full day' };
+const EFFORT_LABELS = { '2min': '2 min', '15min': '15 min', '1hr': '1 hr', 'half-day': 'Half day', 'full-day': 'Full day' };
 
 export function openTaskForm({ task = null, people = [], onSave, onClose }) {
   const isEdit = !!task;
@@ -21,7 +21,7 @@ export function openTaskForm({ task = null, people = [], onSave, onClose }) {
     <div class="modal" id="task-modal" role="dialog" aria-modal="true" aria-label="${isEdit ? 'Edit Task' : 'Add Task'}">
       <div class="modal-handle"></div>
       <div class="modal-header">
-        <h2 class="modal-title">${isEdit ? '✏️ Edit Task' : '✨ Add Task'}</h2>
+        <h2 class="modal-title">${isEdit ? '<i class="uil uil-pen" style="color:var(--accent)"></i> Edit Task' : '<i class="uil uil-plus-circle" style="color:var(--accent)"></i> Add Task'}</h2>
         <button class="modal-close" id="task-modal-close" aria-label="Close">✕</button>
       </div>
       <div class="modal-body">
@@ -78,17 +78,17 @@ export function openTaskForm({ task = null, people = [], onSave, onClose }) {
         </div>
 
         <div class="form-group">
-          <label class="form-label" for="ft-location">📍 Location Trigger</label>
+          <label class="form-label" for="ft-location"><i class="uil uil-map-marker" style="margin-right:2px;color:var(--text-secondary)"></i> Location Trigger</label>
           <select class="form-select form-input" id="ft-location">
             <option value="">— No location trigger —</option>
-            ${PLACE_TYPES.map(p => `<option value="${p.id}" ${task?.locationTrigger === p.id ? 'selected' : ''}>${p.icon} ${p.label}</option>`).join('')}
+            ${PLACE_TYPES.map(p => `<option value="${p.id}" ${task?.locationTrigger === p.id ? 'selected' : ''}>${p.label}</option>`).join('')}
           </select>
           <p style="font-size:0.75rem;color:var(--text-muted);margin-top:4px">Task will surface under Places tab for this location type</p>
         </div>
 
         <div class="modal-footer">
           <button class="btn btn-ghost" id="ft-cancel">Cancel</button>
-          <button class="btn btn-primary" id="ft-save">${isEdit ? '💾 Save Changes' : '✅ Add Task'}</button>
+          <button class="btn btn-primary" id="ft-save">${isEdit ? '<i class="uil uil-check"></i> Save' : '<i class="uil uil-plus"></i> Add'}</button>
         </div>
       </div>
     </div>
@@ -142,7 +142,7 @@ export function openTaskForm({ task = null, people = [], onSave, onClose }) {
 }
 
 function priorityLabel(p) {
-  const map = { P1: '🔴 P1 — Critical', P2: '🟠 P2 — High', P3: '🔵 P3 — Normal', P4: '⚪ P4 — Low' };
+  const map = { P1: 'P1 — Critical', P2: 'P2 — High', P3: 'P3 — Normal', P4: 'P4 — Low' };
   return map[p] || p;
 }
 

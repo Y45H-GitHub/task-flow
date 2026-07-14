@@ -1,11 +1,17 @@
 /**
- * LogView.js — Meeting / Call / Conversation Log tab (Tab 4 — Bento Adapter)
+ * LogView.js — Meeting / Call / Conversation Log tab (Tab 4 — Unicons Adapter)
  */
 import { store } from '../store/store.js';
 import { formatDate, timeAgo } from '../utils/dateUtils.js';
 
 const LOG_TYPES = ['Meeting', 'Call', 'WhatsApp', 'Email', 'In-person'];
-const LOG_ICONS = { Meeting: '🤝', Call: '📞', WhatsApp: '💬', Email: '📧', 'In-person': '👋' };
+const LOG_ICONS = { 
+  Meeting: 'uil-handshake', 
+  Call: 'uil-phone', 
+  WhatsApp: 'uil-comments-alt', 
+  Email: 'uil-envelope', 
+  'In-person': 'uil-users-alt' 
+};
 
 export function mountLogView(container) {
   let searchQuery = '';
@@ -18,7 +24,7 @@ export function mountLogView(container) {
     const searchBar = document.createElement('div');
     searchBar.className = 'log-search';
     searchBar.innerHTML = `
-      <span class="log-search-icon">🔍</span>
+      <i class="log-search-icon uil uil-search"></i>
       <input class="form-input" id="log-search" type="text" placeholder="Search logs by keyword, name, tag..." value="${escHtml(searchQuery)}" />
     `;
     container.appendChild(searchBar);
@@ -33,7 +39,7 @@ export function mountLogView(container) {
     headerRow.className = 'section-header';
     headerRow.innerHTML = `
       <span class="section-title">Conversation Log</span>
-      <button class="btn btn-primary" id="add-log-btn" style="font-size:0.8125rem;padding:6px 14px">+ Add Entry</button>
+      <button class="btn btn-primary" id="add-log-btn" style="font-size:0.8125rem;padding:6px 14px"><i class="uil uil-plus-circle" style="margin-right:2px"></i> Add Entry</button>
     `;
     container.appendChild(headerRow);
 
@@ -65,7 +71,7 @@ export function mountLogView(container) {
     if (!filtered.length) {
       list.innerHTML = `
         <div class="empty-state" style="grid-column: 1 / -1">
-          <div class="empty-icon">📓</div>
+          <div class="empty-icon"><i class="uil uil-book-open"></i></div>
           <div class="empty-title">${q ? 'No results found' : 'No logs recorded'}</div>
           <div class="empty-sub">${q ? 'Refine search tags or text' : 'Log your meetings and conversations'}</div>
         </div>
@@ -79,20 +85,20 @@ export function mountLogView(container) {
       card.className = 'log-card';
       card.style.animationDelay = `${idx * 40}ms`;
 
-      const icon = LOG_ICONS[log.type] || '📝';
+      const iconClass = LOG_ICONS[log.type] || 'uil-notes';
       const actions = (log.actionItems || '').split(',').map(a => a.trim()).filter(Boolean);
       const tags = (log.tags || '').split(',').map(t => t.trim()).filter(Boolean);
 
       card.innerHTML = `
         <div class="log-card-header">
-          <div class="log-type-icon">${icon}</div>
+          <div class="log-type-icon"><i class="uil ${iconClass}"></i></div>
           <div class="log-meta">
             <div class="log-with">${escHtml(log.with || 'Unknown')}</div>
             <div class="log-date-type">${log.type || 'Meeting'} · ${log.date ? formatDate(log.date) : formatDate(log.createdAt)}</div>
           </div>
           <div class="log-actions">
-            <button class="task-action-btn" data-edit="${log.id}" title="Edit">✏️</button>
-            <button class="task-action-btn delete" data-del="${log.id}" title="Delete">🗑</button>
+            <button class="task-action-btn" data-edit="${log.id}" title="Edit"><i class="uil uil-pen"></i></button>
+            <button class="task-action-btn delete" data-del="${log.id}" title="Delete"><i class="uil uil-trash-alt"></i></button>
           </div>
         </div>
 
@@ -130,7 +136,7 @@ export function mountLogView(container) {
       <div class="modal">
         <div class="modal-handle"></div>
         <div class="modal-header">
-          <h2 class="modal-title">${isEdit ? '✏️ Edit Log' : '📓 Log Conversation'}</h2>
+          <h2 class="modal-title">${isEdit ? '<i class="uil uil-pen" style="color:var(--accent)"></i> Edit Log' : '<i class="uil uil-book-open" style="color:var(--accent)"></i> Log Conversation'}</h2>
           <button class="modal-close" id="lf-close">✕</button>
         </div>
         <div class="modal-body">
@@ -142,7 +148,7 @@ export function mountLogView(container) {
             <div class="form-group">
               <label class="form-label">Type</label>
               <select class="form-select form-input" id="lf-type">
-                ${LOG_TYPES.map(t => `<option value="${t}" ${log?.type === t ? 'selected' : (t === 'Meeting' && !log ? 'selected' : '')}>${LOG_ICONS[t]} ${t}</option>`).join('')}
+                ${LOG_TYPES.map(t => `<option value="${t}" ${log?.type === t ? 'selected' : (t === 'Meeting' && !log ? 'selected' : '')}>${t}</option>`).join('')}
               </select>
             </div>
           </div>

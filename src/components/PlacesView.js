@@ -1,5 +1,5 @@
 /**
- * PlacesView.js — Places + Item Locator tab (Tab 3 — Bento Adapter)
+ * PlacesView.js — Places + Item Locator tab (Tab 3 — Unicons Adapter)
  */
 import { store } from '../store/store.js';
 import { PLACE_TYPES, getPlaceType, getCurrentPosition } from '../utils/locationUtils.js';
@@ -16,11 +16,11 @@ export function mountPlacesView(container) {
     locBanner.style.cssText = 'display:flex;align-items:center;justify-content:space-between;background:rgba(245 158 11/0.06);border:1px solid rgba(245 158 11/0.15);border-radius:var(--r-lg);padding:14px 18px;margin-bottom:24px;gap:12px';
     locBanner.innerHTML = `
       <div>
-        <div style="font-weight:700;font-size:0.9375rem;color:#fbbf24">📍 Location Check</div>
+        <div style="font-weight:700;font-size:0.9375rem;color:#fbbf24;display:flex;align-items:center;gap:6px"><i class="uil uil-map-pin" style="font-size:1.125rem"></i> Location Check</div>
         <div style="font-size:0.75rem;color:var(--text-secondary);margin-top:2px">Find tasks relevant to where you are now</div>
       </div>
       <button class="btn" id="check-location-btn" style="background:rgba(245 158 11/0.1);color:#fbbf24;border:1px solid rgba(245 158 11/0.2);flex-shrink:0">
-        🗺 Check Location
+        <i class="uil uil-navigation" style="margin-right:2px"></i> Check Location
       </button>
     `;
     container.appendChild(locBanner);
@@ -40,7 +40,7 @@ export function mountPlacesView(container) {
     if (!locationTasks.length) {
       const empty = document.createElement('div');
       empty.className = 'empty-state';
-      empty.innerHTML = `<div class="empty-icon">📍</div><div class="empty-title">No location-tagged tasks</div><div class="empty-sub">Tag a task with a place type when adding it</div>`;
+      empty.innerHTML = `<div class="empty-icon"><i class="uil uil-map-marker-slash"></i></div><div class="empty-title">No location-tagged tasks</div><div class="empty-sub">Tag a task with a place type when adding it</div>`;
       leftCol.appendChild(empty);
     } else {
       // Group by place type
@@ -58,12 +58,12 @@ export function mountPlacesView(container) {
 
         group.innerHTML = `
           <div class="place-group-header">
-            <div class="place-icon-wrap">${pt.icon}</div>
+            <div class="place-icon-wrap"><i class="uil ${pt.icon}" style="color:#fbbf24"></i></div>
             <div>
               <div class="place-name">${pt.label}</div>
               <div class="place-count">${typeTasks.length} task${typeTasks.length !== 1 ? 's' : ''}</div>
             </div>
-            <button class="location-check-btn" data-type="${typeId}">Near Me?</button>
+            <button class="location-check-btn" data-type="${typeId}"><i class="uil uil-rss" style="margin-right:2px"></i> Near Me?</button>
           </div>
           <div class="person-task-list">
             ${typeTasks.map(t => `
@@ -86,7 +86,7 @@ export function mountPlacesView(container) {
     rightCol.innerHTML = `
       <div class="section-header">
         <span class="section-title">🗃 Physical Item Locator</span>
-        <button class="btn btn-ghost" id="add-item-btn" style="font-size:0.8125rem;padding:4px 10px">+ Track Item</button>
+        <button class="btn btn-ghost" id="add-item-btn" style="font-size:0.8125rem;padding:4px 10px"><i class="uil uil-plus" style="margin-right:2px"></i> Track Item</button>
       </div>
       <div class="item-locator-container" id="item-locator-container"></div>
     `;
@@ -99,22 +99,20 @@ export function mountPlacesView(container) {
 
     const itemContainer = rightCol.querySelector('#item-locator-container');
     if (!items.length) {
-      itemContainer.innerHTML = `<div class="empty-state"><div class="empty-icon">🗃</div><div class="empty-title">No items tracked</div><div class="empty-sub">Keep tabs on where you keep passports, chargers, keys etc.</div></div>`;
+      itemContainer.innerHTML = `<div class="empty-state"><div class="empty-icon"><i class="uil uil-box"></i></div><div class="empty-title">No items tracked</div><div class="empty-sub">Keep tabs on where you keep passports, keys, etc.</div></div>`;
     } else {
-      const ITEM_EMOJIS = ['🗂','💾','🔑','📄','💊','🔌','📦','👜','💻','🪪','📱','🏷'];
       items.forEach((item, idx) => {
-        const emoji = ITEM_EMOJIS[idx % ITEM_EMOJIS.length];
         const card = document.createElement('div');
         card.className = 'item-card';
         card.style.animationDelay = `${idx * 40}ms`;
         card.innerHTML = `
-          <div class="item-emoji">${emoji}</div>
+          <div class="item-emoji"><i class="uil uil-archive" style="color:var(--accent)"></i></div>
           <div class="item-info">
             <div class="item-name">${escHtml(item.name)}</div>
-            <div class="item-location">📍 ${escHtml(item.location)}</div>
+            <div class="item-location"><i class="uil uil-map-marker" style="font-size:0.75rem;margin-right:2px"></i> ${escHtml(item.location)}</div>
             <div class="item-age">Tracked ${timeAgo(item.createdAt)}</div>
           </div>
-          <button class="task-action-btn delete" data-id="${item.id}" title="Delete">🗑</button>
+          <button class="task-action-btn delete" data-id="${item.id}" title="Delete"><i class="uil uil-trash-alt"></i></button>
         `;
         card.querySelector('.delete').addEventListener('click', () => {
           if (confirm(`Remove "${item.name}" from tracker?`)) store.deleteItem(item.id);
@@ -132,8 +130,16 @@ export function mountPlacesView(container) {
   async function checkLocation() {
     const btn = container.querySelector('#check-location-btn');
     if (!btn) return;
-    btn.textContent = '⏳ Checking...';
+    btn.innerHTML = '<i class="uil uil-spinner-alt" style="display:inline-block;animation:spin 1s linear infinite;margin-right:2px"></i> Checking...';
     btn.disabled = true;
+
+    // quick spinner animation rule injection in case it's not in CSS
+    if (!document.getElementById('spin-keyframe')) {
+      const style = document.createElement('style');
+      style.id = 'spin-keyframe';
+      style.textContent = '@keyframes spin { 100% { transform: rotate(360deg); } }';
+      document.head.appendChild(style);
+    }
 
     try {
       const { lat, lng } = await getCurrentPosition();
@@ -148,7 +154,7 @@ export function mountPlacesView(container) {
     } catch (err) {
       showToast('Could not fetch location coordinates.', 'error');
     } finally {
-      btn.textContent = '🗺 Check Location';
+      btn.innerHTML = '<i class="uil uil-navigation" style="margin-right:2px"></i> Check Location';
       btn.disabled = false;
     }
   }
@@ -157,7 +163,7 @@ export function mountPlacesView(container) {
     const { tasks } = store.state;
     const relevant = tasks.filter(t => t.locationTrigger === typeId && t.status !== 'done');
     const pt = getPlaceType(typeId);
-    showToast(`${pt.icon} ${relevant.length} task${relevant.length !== 1 ? 's' : ''} active for ${pt.label}`, 'success');
+    showToast(`${relevant.length} task${relevant.length !== 1 ? 's' : ''} active for ${pt.label}`, 'success');
   }
 
   function showAddItemModal() {
@@ -167,7 +173,7 @@ export function mountPlacesView(container) {
       <div class="modal" style="border-radius:var(--r-xl)">
         <div class="modal-handle"></div>
         <div class="modal-header">
-          <h2 class="modal-title">🗃 Track an Item</h2>
+          <h2 class="modal-title"><i class="uil uil-box" style="color:var(--accent)"></i> Track an Item</h2>
           <button class="modal-close" id="ai-close">✕</button>
         </div>
         <div class="modal-body">

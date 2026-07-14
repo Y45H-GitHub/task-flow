@@ -1,5 +1,5 @@
 /**
- * PeopleView.js — People tab (Tab 2 — Bento Grid Adapter)
+ * PeopleView.js — People tab (Tab 2 — Unicons Adapter)
  */
 import { store } from '../store/store.js';
 import { isOverdue, formatDateShort } from '../utils/dateUtils.js';
@@ -16,7 +16,7 @@ export function mountPeopleView(container) {
     headerRow.className = 'section-header';
     headerRow.innerHTML = `
       <span class="section-title">Tasks by Person</span>
-      <button class="btn btn-ghost" id="add-person-btn" style="font-size:0.8125rem">+ Add Person</button>
+      <button class="btn btn-ghost" id="add-person-btn" style="font-size:0.8125rem"><i class="uil uil-user-plus" style="margin-right:2px"></i> Add Person</button>
     `;
     container.appendChild(headerRow);
 
@@ -25,7 +25,12 @@ export function mountPeopleView(container) {
     const pendingTasks = tasks.filter(t => t.status !== 'done');
 
     if (!people.length) {
-      container.innerHTML += `<div class="empty-state"><div class="empty-icon">👥</div><div class="empty-title">No people yet</div><div class="empty-sub">Add people to tag tasks</div></div>`;
+      container.innerHTML += `
+        <div class="empty-state">
+          <div class="empty-icon"><i class="uil uil-users-alt"></i></div>
+          <div class="empty-title">No people yet</div>
+          <div class="empty-sub">Add people to tag tasks</div>
+        </div>`;
       return;
     }
 
@@ -53,16 +58,16 @@ export function mountPeopleView(container) {
           </div>
           <div class="person-info">
             <div class="person-name">${escHtml(person.name)}</div>
-            <div class="person-task-count">${personTasks.length} task${personTasks.length !== 1 ? 's' : 's'}</div>
+            <div class="person-task-count">${personTasks.length} task${personTasks.length !== 1 ? 's' : ''}</div>
           </div>
-          ${person.id !== 'self' ? `<button class="btn btn-ghost" data-del="${person.id}" style="font-size:0.75rem;padding:4px 10px">✕</button>` : ''}
+          ${person.id !== 'self' ? `<button class="btn btn-ghost" data-del="${person.id}" style="font-size:0.75rem;padding:4px 10px"><i class="uil uil-times"></i></button>` : ''}
         </div>
         <div class="person-task-list">
           ${personTasks.map(t => `
             <div class="person-task-item">
               <span class="badge badge-${t.priority?.toLowerCase() || 'p4'}">${t.priority || 'P4'}</span>
               <span class="ptask-title">${escHtml(t.title)}</span>
-              ${t.dueDate ? `<span class="ptask-due${isOverdue(t.dueDate, t.status) ? ' overdue' : ''}">📅 ${formatDateShort(t.dueDate)}</span>` : ''}
+              ${t.dueDate ? `<span class="ptask-due${isOverdue(t.dueDate, t.status) ? ' overdue' : ''}"><i class="uil uil-calendar-alt" style="margin-right:2px"></i> ${formatDateShort(t.dueDate)}</span>` : ''}
             </div>
           `).join('')}
         </div>
@@ -84,7 +89,7 @@ export function mountPeopleView(container) {
       const empty = document.createElement('div');
       empty.className = 'empty-state';
       empty.innerHTML = `
-        <div class="empty-icon">👥</div>
+        <div class="empty-icon"><i class="uil uil-users-alt"></i></div>
         <div class="empty-title">All caught up!</div>
         <div class="empty-sub">No pending tasks for anyone.</div>
       `;
@@ -125,7 +130,7 @@ export function mountPeopleView(container) {
       <div class="modal" style="border-radius:var(--r-xl)">
         <div class="modal-handle"></div>
         <div class="modal-header">
-          <h2 class="modal-title">👤 Add Person</h2>
+          <h2 class="modal-title"><i class="uil uil-user-plus" style="color:var(--accent)"></i> Add Person</h2>
           <button class="modal-close" id="ap-close">✕</button>
         </div>
         <div class="modal-body">

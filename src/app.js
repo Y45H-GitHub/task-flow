@@ -12,11 +12,11 @@ import { openTaskForm }    from './components/TaskForm.js';
 import { isOverdue }       from './utils/dateUtils.js';
 
 const TABS = [
-  { id: 'tasks',   label: 'Tasks',  icon: '📋' },
-  { id: 'people',  label: 'People', icon: '👥' },
-  { id: 'places',  label: 'Places', icon: '📍' },
-  { id: 'log',     label: 'Log',    icon: '📓' },
-  { id: 'more',    label: 'More',   icon: '⚙️' },
+  { id: 'tasks',   label: 'Tasks',  icon: 'uil-clipboard-notes' },
+  { id: 'people',  label: 'People', icon: 'uil-users-alt' },
+  { id: 'places',  label: 'Places', icon: 'uil-map-marker' },
+  { id: 'log',     label: 'Log',    icon: 'uil-book-open' },
+  { id: 'more',    label: 'More',   icon: 'uil-setting' },
 ];
 
 const MOUNTERS = {
@@ -45,13 +45,13 @@ function buildShell() {
     <!-- Desktop Left Sidebar -->
     <aside class="desktop-sidebar" role="navigation" aria-label="Sidebar navigation">
       <div class="sidebar-logo">
-        <div class="app-logo-icon">✨</div>
+        <div class="app-logo-icon"><i class="uil uil-bolt"></i></div>
         <span class="app-logo-text">FlowTask</span>
       </div>
       <div class="sidebar-nav">
         ${TABS.map(t => `
           <button class="sidebar-item" data-tab="${t.id}" id="side-${t.id}" role="tab" aria-selected="false">
-            <span class="sidebar-icon">${t.icon}</span>
+            <i class="sidebar-icon uil ${t.icon}"></i>
             <span class="sidebar-label">${t.label}</span>
           </button>
         `).join('')}
@@ -62,7 +62,7 @@ function buildShell() {
     <header class="app-header">
       <div class="app-logo">
         <!-- Show logo only on mobile/tablet header (sidebar handles desktop) -->
-        <div class="app-logo-icon" style="display: var(--display-mobile-logo, inline-flex)">✨</div>
+        <div class="app-logo-icon" style="display: var(--display-mobile-logo, inline-flex)"><i class="uil uil-bolt"></i></div>
         <span class="app-logo-text" style="display: var(--display-mobile-logo, inline-flex)">FlowTask</span>
       </div>
       <div class="app-header-right" id="header-stats"></div>
@@ -77,13 +77,13 @@ function buildShell() {
     </main>
 
     <!-- FAB -->
-    <button class="fab" id="fab" aria-label="Add new task" title="Add task">+</button>
+    <button class="fab" id="fab" aria-label="Add new task" title="Add task"><i class="uil uil-plus" style="font-size: 1.5rem; display: flex"></i></button>
 
     <!-- Bottom Nav (Mobile) -->
     <nav class="bottom-nav" role="navigation" aria-label="Bottom navigation">
       ${TABS.map(t => `
         <button class="nav-item" data-tab="${t.id}" id="nav-${t.id}" role="tab" aria-selected="false">
-          <span class="nav-icon">${t.icon}</span>
+          <i class="nav-icon uil ${t.icon}" style="font-size: 1.375rem"></i>
           <span class="nav-label">${t.label}</span>
         </button>
       `).join('')}

@@ -1,5 +1,5 @@
 /**
- * TaskCard.js — Renders a single task card DOM element
+ * TaskCard.js — Renders a single task card DOM element (Unicons Adapter)
  */
 import { timeAgo, formatDateTime, formatDateShort, isOverdue, isAging } from '../utils/dateUtils.js';
 import { getPlaceType } from '../utils/locationUtils.js';
@@ -12,7 +12,13 @@ const STATUS_BADGE = {
   blocked:    { cls: 'badge-blocked',    label: 'Blocked' },
   done:       { cls: 'badge-done',       label: 'Done' },
 };
-const EFFORT_ICONS = { '2min': '⚡', '15min': '🕐', '1hr': '⏱', 'half-day': '🌤', 'full-day': '📅' };
+const EFFORT_ICONS = { 
+  '2min': '<i class="uil uil-bolt" style="font-size:0.875rem"></i>', 
+  '15min': '<i class="uil uil-clock" style="font-size:0.875rem"></i>', 
+  '1hr': '<i class="uil uil-history" style="font-size:0.875rem"></i>', 
+  'half-day': '<i class="uil uil-sun" style="font-size:0.875rem"></i>', 
+  'full-day': '<i class="uil uil-calendar-alt" style="font-size:0.875rem"></i>' 
+};
 
 /**
  * @param {object} task
@@ -32,7 +38,7 @@ export function createTaskCard(task, person, { onToggle, onEdit, onDelete }) {
   const check = document.createElement('button');
   check.className = 'task-check';
   check.setAttribute('aria-label', task.status === 'done' ? 'Mark incomplete' : 'Mark complete');
-  check.textContent = task.status === 'done' ? '✓' : '';
+  check.innerHTML = task.status === 'done' ? '<i class="uil uil-check"></i>' : '';
   check.addEventListener('click', () => onToggle(task.id));
   card.appendChild(check);
 
@@ -52,8 +58,8 @@ export function createTaskCard(task, person, { onToggle, onEdit, onDelete }) {
   // Flags (aging, overdue)
   const flags = document.createElement('div');
   flags.className = 'task-flags';
-  if (aging)  flags.innerHTML += `<span class="flag-aging" title="Pending 7+ days">🔥</span>`;
-  if (overdue) flags.innerHTML += `<span title="Overdue!">⚠️</span>`;
+  if (aging)  flags.innerHTML += `<i class="uil uil-fire flag-aging" title="Pending 7+ days" style="color:#ef4444;font-size:1.125rem"></i>`;
+  if (overdue) flags.innerHTML += `<i class="uil uil-exclamation-triangle" title="Overdue!" style="color:#ef4444;font-size:1.125rem;margin-left:2px"></i>`;
   titleRow.appendChild(flags);
   body.appendChild(titleRow);
 
@@ -91,18 +97,18 @@ export function createTaskCard(task, person, { onToggle, onEdit, onDelete }) {
   // Due date
   if (task.dueDate) {
     const dueCls = overdue ? 'task-meta-item task-due-overdue' : 'task-meta-item';
-    meta.innerHTML += `<span class="${dueCls}"><span class="icon">📅</span>${overdue ? '⚠️ Overdue · ' : ''}Due ${formatDateShort(task.dueDate)}</span>`;
+    meta.innerHTML += `<span class="${dueCls}"><i class="uil uil-calendar-alt" style="font-size:0.875rem"></i>${overdue ? 'Overdue · ' : ''}Due ${formatDateShort(task.dueDate)}</span>`;
   }
 
   // Category
   if (task.category) {
-    meta.innerHTML += `<span class="task-meta-item"><span class="icon">🏷</span>${escHtml(task.category)}</span>`;
+    meta.innerHTML += `<span class="task-meta-item"><i class="uil uil-tag-alt" style="font-size:0.875rem"></i>${escHtml(task.category)}</span>`;
   }
 
   // Location trigger
   if (task.locationTrigger) {
     const pt = getPlaceType(task.locationTrigger);
-    meta.innerHTML += `<span class="location-badge">${pt.icon} ${pt.label}</span>`;
+    meta.innerHTML += `<span class="location-badge"><i class="uil ${pt.icon}" style="font-size:0.875rem"></i> ${pt.label}</span>`;
   }
 
   body.appendChild(meta);
@@ -110,9 +116,9 @@ export function createTaskCard(task, person, { onToggle, onEdit, onDelete }) {
   // Timestamp
   const ts = document.createElement('div');
   ts.className = 'task-timestamp';
-  ts.innerHTML = `<span>🕐</span><span>Added ${timeAgo(task.createdAt)} · ${formatDateTime(task.createdAt)}</span>`;
+  ts.innerHTML = `<i class="uil uil-clock-three" style="font-size:0.8125rem"></i> <span>Added ${timeAgo(task.createdAt)} · ${formatDateTime(task.createdAt)}</span>`;
   if (task.completedAt) {
-    ts.innerHTML += ` &nbsp;·&nbsp; <span>✓ Done ${timeAgo(task.completedAt)}</span>`;
+    ts.innerHTML += ` &nbsp;·&nbsp; <i class="uil uil-check-circle" style="font-size:0.8125rem;color:var(--status-done)"></i> <span>Done ${timeAgo(task.completedAt)}</span>`;
   }
   body.appendChild(ts);
 
@@ -124,14 +130,14 @@ export function createTaskCard(task, person, { onToggle, onEdit, onDelete }) {
 
   const editBtn = document.createElement('button');
   editBtn.className = 'task-action-btn';
-  editBtn.textContent = '✏️';
+  editBtn.innerHTML = '<i class="uil uil-pen"></i>';
   editBtn.title = 'Edit';
   editBtn.addEventListener('click', () => onEdit(task));
   actions.appendChild(editBtn);
 
   const delBtn = document.createElement('button');
   delBtn.className = 'task-action-btn delete';
-  delBtn.textContent = '🗑';
+  delBtn.innerHTML = '<i class="uil uil-trash-alt"></i>';
   delBtn.title = 'Delete';
   delBtn.addEventListener('click', () => {
     if (confirm(`Delete "${task.title}"?`)) onDelete(task.id);
