@@ -2,29 +2,44 @@
  * PlacesView.js — Places + Item Locator tab (Tab 3 — Unicons Adapter)
  */
 import { store } from '../store/store.js';
-import { PLACE_TYPES, getPlaceType, getCurrentPosition } from '../utils/locationUtils.js';
+import { PLACE_TYPES, getPlaceType, getCurrentPosition, getNearbyPlaceTypes, getRelevantTasks } from '../utils/locationUtils.js';
 import { timeAgo } from '../utils/dateUtils.js';
-import { showToast } from '../app.js';
+import { showToast, startLocationAlerts, stopLocationAlerts } from '../app.js';
 
 export function mountPlacesView(container) {
   function render() {
     const { tasks, items } = store.state;
     container.innerHTML = '';
 
+    const alertsActive = localStorage.getItem('flowtask_loc_alerts') === 'true';
+
     // Location check banner
     const locBanner = document.createElement('div');
-    locBanner.style.cssText = 'display:flex;align-items:center;justify-content:space-between;background:rgba(245 158 11/0.06);border:1px solid rgba(245 158 11/0.15);border-radius:var(--r-lg);padding:14px 18px;margin-bottom:24px;gap:12px';
+    locBanner.style.cssText = 'display:flex;flex-direction:column;background:rgba(245 158 11/0.06);border:1px solid rgba(245 158 11/0.15);border-radius:var(--r-lg);padding:18px;margin-bottom:24px;gap:16px';
     locBanner.innerHTML = `
-      <div>
-        <div style="font-weight:700;font-size:0.9375rem;color:#fbbf24;display:flex;align-items:center;gap:6px"><i class="uil uil-map-pin" style="font-size:1.125rem"></i> Location Check</div>
-        <div style="font-size:0.75rem;color:var(--text-secondary);margin-top:2px">Find tasks relevant to where you are now</div>
+      <div style="display:flex;align-items:center;justify-content:space-between;gap:12px;width:100%">
+        <div>
+          <div style="font-weight:700;font-size:0.9375rem;color:#fbbf24;display:flex;align-items:center;gap:6px"><i class="uil uil-map-pin" style="font-size:1.125rem"></i> Location Check</div>
+          <div style="font-size:0.75rem;color:var(--text-secondary);margin-top:2px">Find tasks relevant to where you are now</div>
+        </div>
+        <button class="btn" id="check-location-btn" style="background:rgba(245 158 11/0.1);color:#fbbf24;border:1px solid rgba(245 158 11/0.2);flex-shrink:0">
+          <i class="uil uil-navigation" style="margin-right:2px"></i> Check Location
+        </button>
       </div>
-      <button class="btn" id="check-location-btn" style="background:rgba(245 158 11/0.1);color:#fbbf24;border:1px solid rgba(245 158 11/0.2);flex-shrink:0">
-        <i class="uil uil-navigation" style="margin-right:2px"></i> Check Location
-      </button>
+      <div style="height:1px;background:rgba(245 158 11/0.15)"></div>
+      <div style="display:flex;align-items:center;justify-content:space-between;width:100%">
+        <div style="font-size:0.8125rem;color:var(--text-primary);display:flex;align-items:center;gap:6px">
+          <i class="uil uil-bell" style="color:#fbbf24"></i> Always-on background alerts
+        </div>
+        <label class="toggle-switch">
+          <input type="checkbox" id="location-alerts-toggle" ${alertsActive ? 'checked' : ''} />
+          <span class="toggle-slider"></span>
+        </label>
+      </div>
     `;
     container.appendChild(locBanner);
     locBanner.querySelector('#check-location-btn').addEventListener('click', checkLocation);
+    locBanner.querySelector('#location-alerts-toggle').addEventListener('change', toggleLocationAlerts);
 
     // Grid container to hold both bento sections
     const grid = document.createElement('div');
@@ -144,18 +159,31 @@ export function mountPlacesView(container) {
     try {
       const { lat, lng } = await getCurrentPosition();
       const { tasks } = store.state;
-      const locationTasks = tasks.filter(t => t.locationTrigger && t.status !== 'done');
+      const nearbyTypeIds = await getNearbyPlaceTypes(lat, lng);
+      const matched = getRelevantTasks(tasks, nearbyTypeIds);
 
-      if (!locationTasks.length) {
-        showToast('No location tasks active in your list.', 'info');
+      if (!matched.length) {
+        showToast('No matching shops nearby for your tasks.', 'info');
       } else {
-        showToast(`📍 Found ${locationTasks.length} location tasks in your checklist!`, 'success');
+        showToast(`📍 Found ${matched.length} task${matched.length !== 1 ? 's' : ''} for nearby shops: ${matched.map(t => `"${t.title}"`).join(', ')}`, 'success');
       }
     } catch (err) {
       showToast('Could not fetch location coordinates.', 'error');
     } finally {
       btn.innerHTML = '<i class="uil uil-navigation" style="margin-right:2px"></i> Check Location';
       btn.disabled = false;
+    }
+  }
+
+  function toggleLocationAlerts(e) {
+    const active = e.target.checked;
+    localStorage.setItem('flowtask_loc_alerts', active ? 'true' : 'false');
+    if (active) {
+      startLocationAlerts();
+      showToast('🔔 Location alerts enabled!', 'success');
+    } else {
+      stopLocationAlerts();
+      showToast('🔕 Location alerts disabled.', 'info');
     }
   }
 

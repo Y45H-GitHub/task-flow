@@ -3,6 +3,8 @@
  */
 import { timeAgo, formatDateTime, formatDateShort, isOverdue, isAging } from '../utils/dateUtils.js';
 import { getPlaceType } from '../utils/locationUtils.js';
+import { store } from '../store/store.js';
+import { openTaskForm } from './TaskForm.js';
 
 const PRIORITY_COLORS = { P1: 'badge-p1', P2: 'badge-p2', P3: 'badge-p3', P4: 'badge-p4' };
 const STATUS_BADGE = {
@@ -20,6 +22,14 @@ const EFFORT_ICONS = {
   'full-day': '<i class="uil uil-calendar-alt" style="font-size:0.875rem"></i>' 
 };
 
+function getKeywords(title) {
+  if (!title) return [];
+  return title.toLowerCase()
+    .split(/\s+/)
+    .map(w => w.replace(/[^a-z0-9]/g, ''))
+    .filter(w => w.length > 3);
+}
+
 /**
  * @param {object} task
  * @param {object} person  — full person object { name, color }
@@ -27,7 +37,7 @@ const EFFORT_ICONS = {
  */
 export function createTaskCard(task, person, { onToggle, onEdit, onDelete }) {
   const card = document.createElement('div');
-  card.className = `task-card${task.status === 'done' ? ' done' : ''}${isOverdue(task.dueDate, task.status) ? ' overdue' : ''}`;
+  card.className = `task-card${task.status === 'done' ? ' done' : ''}${isOverdue(task.dueDate, task.status) ? ' overdue' : ''}${task.starred ? ' starred' : ''}`;
   card.dataset.id = task.id;
   card.dataset.priority = task.priority || 'P4';
 
@@ -71,6 +81,120 @@ export function createTaskCard(task, person, { onToggle, onEdit, onDelete }) {
     body.appendChild(notes);
   }
 
+  // Subtasks section
+  const subtasksList = document.createElement('div');
+  subtasksList.className = 'task-card-subtasks';
+
+  if (task.subtasks && task.subtasks.length > 0) {
+    const doneCount = task.subtasks.filter(s => s.status === 'done').length;
+    const pct = Math.round((doneCount / task.subtasks.length) * 100);
+
+    const progressWrap = document.createElement('div');
+    progressWrap.className = 'subtask-progress-wrap';
+    progressWrap.innerHTML = `
+      <div class="subtask-progress-text">
+        <span>Checklist (${doneCount}/${task.subtasks.length})</span>
+        <span>${pct}%</span>
+      </div>
+      <div class="subtask-progress-bar-bg">
+        <div class="subtask-progress-bar-fill" style="width: ${pct}%"></div>
+      </div>
+    `;
+    subtasksList.appendChild(progressWrap);
+
+    const listContainer = document.createElement('div');
+    listContainer.className = 'subtask-items-list';
+
+    task.subtasks.forEach(sub => {
+      const item = document.createElement('div');
+      item.className = `subtask-item${sub.status === 'done' ? ' done' : ''}`;
+
+      const subCheck = document.createElement('button');
+      subCheck.className = 'subtask-check';
+      subCheck.innerHTML = sub.status === 'done' ? '<i class="uil uil-check"></i>' : '';
+      subCheck.addEventListener('click', (e) => {
+        e.stopPropagation();
+        store.toggleSubtask(task.id, sub.id);
+      });
+
+      const subTitle = document.createElement('span');
+      subTitle.className = 'subtask-title';
+      subTitle.textContent = sub.title;
+
+      const subActions = document.createElement('div');
+      subActions.className = 'subtask-actions';
+
+      const subEdit = document.createElement('button');
+      subEdit.className = 'subtask-action-btn';
+      subEdit.innerHTML = '<i class="uil uil-pen"></i>';
+      subEdit.title = 'Edit Subtask';
+      subEdit.addEventListener('click', (e) => {
+        e.stopPropagation();
+        const { people } = store.state;
+        openTaskForm({
+          task: sub,
+          people,
+          onSave: (data) => {
+            store.updateSubtask(task.id, sub.id, data);
+          }
+        });
+      });
+
+      const subDel = document.createElement('button');
+      subDel.className = 'subtask-action-btn delete';
+      subDel.innerHTML = '<i class="uil uil-trash-alt"></i>';
+      subDel.title = 'Delete Subtask';
+      subDel.addEventListener('click', (e) => {
+        e.stopPropagation();
+        if (confirm(`Delete subtask "${sub.title}"?`)) {
+          store.deleteSubtask(task.id, sub.id);
+        }
+      });
+
+      subActions.appendChild(subEdit);
+      subActions.appendChild(subDel);
+
+      item.appendChild(subCheck);
+      item.appendChild(subTitle);
+      item.appendChild(subActions);
+      listContainer.appendChild(item);
+    });
+
+    subtasksList.appendChild(listContainer);
+  }
+
+  // Inline Add Subtask input
+  const addSubtaskForm = document.createElement('div');
+  addSubtaskForm.className = 'subtask-add-form';
+  addSubtaskForm.innerHTML = `
+    <input type="text" class="subtask-add-input" placeholder="+ Add a step..." />
+    <button class="btn btn-ghost subtask-add-btn" style="padding: 4px 8px; font-size: 0.75rem; display: none">Add</button>
+  `;
+  const input = addSubtaskForm.querySelector('.subtask-add-input');
+  const btn = addSubtaskForm.querySelector('.subtask-add-btn');
+
+  input.addEventListener('focus', () => { btn.style.display = 'block'; });
+  input.addEventListener('blur', () => {
+    setTimeout(() => { if (document.activeElement !== input) btn.style.display = 'none'; }, 200);
+  });
+
+  const handleAdd = () => {
+    const text = input.value.trim();
+    if (text) {
+      store.addSubtask(task.id, { title: text });
+      input.value = '';
+    }
+  };
+  btn.addEventListener('click', handleAdd);
+  input.addEventListener('keydown', e => {
+    if (e.key === 'Enter') {
+      handleAdd();
+    }
+  });
+
+  subtasksList.appendChild(addSubtaskForm);
+  body.appendChild(subtasksList);
+
   // Meta row
   const meta = document.createElement('div');
   meta.className = 'task-meta';
@@ -113,6 +237,57 @@ export function createTaskCard(task, person, { onToggle, onEdit, onDelete }) {
 
   body.appendChild(meta);
 
+  // Related Tasks grouping across people
+  const allTasks = store.state.tasks;
+  const people = store.state.people;
+  const personMap = Object.fromEntries(people.map(p => [p.id, p]));
+  const currentKeywords = getKeywords(task.title);
+
+  const relatedTasks = allTasks.filter(t => {
+    if (t.id === task.id || t.status === 'done' || t.person === task.person) return false;
+
+    const catMatch = t.category && task.category && t.category.trim().toLowerCase() === task.category.trim().toLowerCase();
+    if (catMatch) return true;
+
+    const tKeywords = getKeywords(t.title);
+    return currentKeywords.some(k => tKeywords.includes(k));
+  });
+
+  if (relatedTasks.length > 0) {
+    const relatedSection = document.createElement('div');
+    relatedSection.className = 'task-related-section';
+
+    const toggleBtn = document.createElement('button');
+    toggleBtn.className = 'related-toggle-btn';
+    toggleBtn.innerHTML = `<i class="uil uil-link-h"></i> Related Tasks (${relatedTasks.length})`;
+
+    const relatedList = document.createElement('div');
+    relatedList.className = 'related-tasks-list';
+    relatedList.style.display = 'none';
+
+    relatedTasks.forEach(rt => {
+      const rtItem = document.createElement('div');
+      rtItem.className = 'related-task-item';
+      const rtPerson = personMap[rt.person] || { name: 'Unassigned', color: 'var(--text-muted)' };
+      rtItem.innerHTML = `
+        <span class="person-pill" style="background:${rtPerson.color}22;color:${rtPerson.color};font-size:0.6875rem;border: 1px solid ${rtPerson.color}44">${rtPerson.name}</span>
+        <span class="related-task-title">${escHtml(rt.title)}</span>
+      `;
+      relatedList.appendChild(rtItem);
+    });
+
+    toggleBtn.addEventListener('click', (e) => {
+      e.stopPropagation();
+      const isHidden = relatedList.style.display === 'none';
+      relatedList.style.display = isHidden ? 'flex' : 'none';
+      toggleBtn.classList.toggle('active', isHidden);
+    });
+
+    relatedSection.appendChild(toggleBtn);
+    relatedSection.appendChild(relatedList);
+    body.appendChild(relatedSection);
+  }
+
   // Timestamp
   const ts = document.createElement('div');
   ts.className = 'task-timestamp';
@@ -127,6 +302,17 @@ export function createTaskCard(task, person, { onToggle, onEdit, onDelete }) {
   // Actions
   const actions = document.createElement('div');
   actions.className = 'task-actions';
+
+  // Star Toggle
+  const starBtn = document.createElement('button');
+  starBtn.className = `task-action-btn star-btn${task.starred ? ' starred' : ''}`;
+  starBtn.innerHTML = task.starred ? '<i class="uil uil-star" style="color:#fbbf24"></i>' : '<i class="uil uil-star"></i>';
+  starBtn.title = task.starred ? 'Unstar' : 'Star';
+  starBtn.addEventListener('click', (e) => {
+    e.stopPropagation();
+    store.updateTask(task.id, { starred: !task.starred });
+  });
+  actions.appendChild(starBtn);
 
   const editBtn = document.createElement('button');
   editBtn.className = 'task-action-btn';

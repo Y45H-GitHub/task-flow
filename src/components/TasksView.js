@@ -28,12 +28,23 @@ const PRIORITY_ORDER = { P1: 1, P2: 2, P3: 3, P4: 4 };
 
 let _activeFilter = 'all';
 let _activeSort   = 'added';
+let _searchQuery  = '';
+let _viewMode     = 'list'; // 'list' or 'board'
 
 export function mountTasksView(container) {
   container.innerHTML = `
     <div class="tasks-toolbar">
+      <div class="tasks-search-row">
+        <div class="tasks-search-wrap">
+          <i class="tasks-search-icon uil uil-search"></i>
+          <input class="form-input" id="tasks-search" type="text" placeholder="Search tasks by title, notes, person, category..." value="${_searchQuery}" />
+        </div>
+        <button class="btn btn-ghost btn-icon" id="board-view-toggle" title="Toggle Board/List View">
+          <i class="uil ${_viewMode === 'board' ? 'uil-list-ul' : 'uil-columns'}"></i>
+        </button>
+      </div>
       <div class="tasks-filter-row" id="filter-row"></div>
-      <div class="tasks-sort-row">
+      <div class="tasks-sort-row" id="sort-toolbar-row">
         <span class="sort-label">Sort:</span>
         <div id="sort-row" style="display:flex;gap:6px;flex-wrap:wrap"></div>
         <div class="jump-btns">
@@ -44,6 +55,28 @@ export function mountTasksView(container) {
     </div>
     <div class="task-list" id="task-list"></div>
   `;
+
+  // Search input binding
+  const searchInput = container.querySelector('#tasks-search');
+  searchInput.addEventListener('input', e => {
+    _searchQuery = e.target.value;
+    render();
+  });
+
+  // Board view toggle binding
+  const viewToggle = container.querySelector('#board-view-toggle');
+  viewToggle.addEventListener('click', () => {
+    _viewMode = _viewMode === 'board' ? 'list' : 'board';
+    viewToggle.innerHTML = `<i class="uil ${_viewMode === 'board' ? 'uil-list-ul' : 'uil-columns'}"></i>`;
+    
+    // Hide/show sort controls and jump buttons in Kanban view
+    const sortRowEl = container.querySelector('#sort-toolbar-row');
+    if (sortRowEl) {
+      sortRowEl.style.display = _viewMode === 'board' ? 'none' : 'flex';
+    }
+    
+    render();
+  });
 
   // Filter chips
   const filterRow = container.querySelector('#filter-row');
@@ -90,10 +123,67 @@ export function mountTasksView(container) {
     const personMap = Object.fromEntries(people.map(p => [p.id, p]));
 
     let filtered = applyFilter(tasks, _activeFilter);
-    filtered = applySort(filtered, _activeSort);
+    
+    // Apply search filter
+    if (_searchQuery.trim()) {
+      const q = _searchQuery.toLowerCase().trim();
+      const matchedPersonIds = people.filter(p => p.name.toLowerCase().includes(q)).map(p => p.id);
+      filtered = filtered.filter(t => 
+        t.title.toLowerCase().includes(q) ||
+        (t.notes && t.notes.toLowerCase().includes(q)) ||
+        (t.category && t.category.toLowerCase().includes(q)) ||
+        matchedPersonIds.includes(t.person) ||
+        (t.subtasks && t.subtasks.some(sub => sub.title.toLowerCase().includes(q)))
+      );
+    }
 
     const list = container.querySelector('#task-list');
+    
+    if (_viewMode === 'board') {
+      const statuses = ['todo', 'inprogress', 'waiting', 'blocked', 'done'];
+      const statusLabels = { todo: 'To Do', inprogress: 'In Progress', waiting: 'Waiting', blocked: 'Blocked', done: 'Done' };
+      const statusIcons = { todo: 'uil-clipboard-notes', inprogress: 'uil-history', waiting: 'uil-clock', blocked: 'uil-ban', done: 'uil-check-circle' };
+      
+      list.className = 'kanban-board animate-in';
+      list.innerHTML = statuses.map(s => `
+        <div class="kanban-column" data-status="${s}">
+          <div class="kanban-column-header">
+            <span class="kanban-column-title"><i class="uil ${statusIcons[s]}"></i> ${statusLabels[s]}</span>
+            <span class="kanban-column-count">0</span>
+          </div>
+          <div class="kanban-column-tasks" id="kanban-tasks-${s}"></div>
+        </div>
+      `).join('');
+
+      statuses.forEach(s => {
+        const colTasks = filtered.filter(t => t.status === s);
+        const colContainer = list.querySelector(`#kanban-tasks-${s}`);
+        const countEl = list.querySelector(`[data-status="${s}"] .kanban-column-count`);
+        countEl.textContent = colTasks.length;
+
+        if (colTasks.length === 0) {
+          colContainer.innerHTML = `<div class="kanban-empty">No tasks</div>`;
+        } else {
+          colTasks.forEach((task, idx) => {
+            const card = createTaskCard(task, personMap[task.person], {
+              onToggle: (id) => { store.toggleTask(id); render(); },
+              onEdit:   (t)  => openTaskForm({ task: t, people, onSave: (data) => { store.updateTask(t.id, data); render(); } }),
+              onDelete: (id) => { store.deleteTask(id); render(); },
+            });
+            card.classList.add('kanban-card');
+            card.style.animationDelay = `${idx * 20}ms`;
+            colContainer.appendChild(card);
+          });
+        }
+      });
+      return;
+    }
+
+    // List view rendering
+    list.className = 'task-list';
     list.innerHTML = '';
+    
+    filtered = applySort(filtered, _activeSort);
 
     if (!filtered.length) {
       list.innerHTML = `

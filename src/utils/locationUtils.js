@@ -34,7 +34,39 @@ export function getCurrentPosition() {
 }
 
 export async function getNearbyPlaceTypes(lat, lng) {
-  return PLACE_TYPES.map(p => p.id);
+  const query = `[out:json];(node(around:500,${lat},${lng})[shop];node(around:500,${lat},${lng})[amenity=pharmacy];node(around:500,${lat},${lng})[amenity=bank];node(around:500,${lat},${lng})[amenity=atm];node(around:500,${lat},${lng})[amenity=restaurant];node(around:500,${lat},${lng})[amenity=cafe];);out;`;
+  const url = `https://overpass-api.de/api/interpreter?data=${encodeURIComponent(query)}`;
+
+  try {
+    const res = await fetch(url);
+    if (!res.ok) throw new Error('Overpass API error');
+    const data = await res.json();
+    const detectedTypes = new Set();
+
+    if (data.elements) {
+      for (const el of data.elements) {
+        const tags = el.tags || {};
+        const shop = tags.shop || '';
+        const amenity = tags.amenity || '';
+        const name = tags.name || '';
+
+        for (const pt of PLACE_TYPES) {
+          const match = pt.keywords.some(k =>
+            shop.toLowerCase().includes(k) ||
+            amenity.toLowerCase().includes(k) ||
+            name.toLowerCase().includes(k)
+          );
+          if (match) {
+            detectedTypes.add(pt.id);
+          }
+        }
+      }
+    }
+    return Array.from(detectedTypes);
+  } catch (err) {
+    console.error('Failed to fetch nearby shops:', err);
+    return [];
+  }
 }
 
 export function getRelevantTasks(tasks, nearbyTypeIds) {
@@ -43,4 +75,17 @@ export function getRelevantTasks(tasks, nearbyTypeIds) {
     nearbyTypeIds.includes(t.locationTrigger) &&
     t.status !== 'done'
   );
+}
+
+export async function runLocationCheck(tasks, onMatch) {
+  try {
+    const { lat, lng } = await getCurrentPosition();
+    const nearbyTypeIds = await getNearbyPlaceTypes(lat, lng);
+    const matched = getRelevantTasks(tasks, nearbyTypeIds);
+    if (matched.length > 0) {
+      onMatch(matched);
+    }
+  } catch (err) {
+    console.error('Failed runLocationCheck:', err);
+  }
 }

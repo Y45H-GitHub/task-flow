@@ -71,7 +71,12 @@ export const store = {
 
   // ── Task helpers ──
   addTask(task) {
-    this.update(s => s.tasks.unshift({ ...task, id: crypto.randomUUID(), createdAt: new Date().toISOString() }));
+    this.update(s => s.tasks.unshift({
+      ...task,
+      id: crypto.randomUUID(),
+      createdAt: new Date().toISOString(),
+      subtasks: task.subtasks || []
+    }));
   },
   updateTask(id, patch) {
     this.update(s => {
@@ -92,6 +97,51 @@ export const store = {
       } else {
         task.status = 'done';
         task.completedAt = new Date().toISOString();
+      }
+    });
+  },
+
+  // ── Subtask helpers ──
+  addSubtask(taskId, subtask) {
+    this.update(s => {
+      const task = s.tasks.find(t => t.id === taskId);
+      if (!task) return;
+      if (!task.subtasks) task.subtasks = [];
+      task.subtasks.push({
+        ...subtask,
+        id: crypto.randomUUID(),
+        createdAt: new Date().toISOString(),
+        status: subtask.status || 'todo'
+      });
+    });
+  },
+  updateSubtask(taskId, subtaskId, patch) {
+    this.update(s => {
+      const task = s.tasks.find(t => t.id === taskId);
+      if (!task || !task.subtasks) return;
+      const sub = task.subtasks.find(sub => sub.id === subtaskId);
+      if (sub) Object.assign(sub, patch);
+    });
+  },
+  deleteSubtask(taskId, subtaskId) {
+    this.update(s => {
+      const task = s.tasks.find(t => t.id === taskId);
+      if (!task || !task.subtasks) return;
+      task.subtasks = task.subtasks.filter(sub => sub.id !== subtaskId);
+    });
+  },
+  toggleSubtask(taskId, subtaskId) {
+    this.update(s => {
+      const task = s.tasks.find(t => t.id === taskId);
+      if (!task || !task.subtasks) return;
+      const sub = task.subtasks.find(sub => sub.id === subtaskId);
+      if (!sub) return;
+      if (sub.status === 'done') {
+        sub.status = 'todo';
+        delete sub.completedAt;
+      } else {
+        sub.status = 'done';
+        sub.completedAt = new Date().toISOString();
       }
     });
   },

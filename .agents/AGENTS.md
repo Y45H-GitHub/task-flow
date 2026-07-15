@@ -4,7 +4,7 @@
 - Vanilla JS (ES Modules), no framework
 - Vite for bundling and dev server
 - Vanilla CSS only — no Tailwind, no Bootstrap
-- LocalStorage for persistence (key: `flowtask_data`)
+- LocalStorage for persistence (key: `flowtask_data_v2`)
 
 ## Architecture Rules
 - All state lives in `src/store/store.js` — never mutate state directly outside the store
@@ -20,7 +20,8 @@
 - No emojis for primary UI elements or navigation. Use Unicons (or similar SVG/webfont line icon packs) with clean, consistent vector aesthetics.
 
 ## Data Conventions
-- Task schema: `{ id, title, notes, createdAt, dueDate, priority, effort, person, status, category, locationTrigger, completedAt }`
+- Task schema: `{ id, title, notes, createdAt, dueDate, priority, effort, person, status, category, locationTrigger, completedAt, subtasks }`
+- Subtask schema: `{ id, title, notes, createdAt, dueDate, priority, effort, person, status, completedAt }`
 - Log schema: `{ id, date, with, type, summary, actionItems, tags, createdAt }`
 - Item schema: `{ id, name, location, createdAt }`
 - Person schema: `{ id, name, color }`

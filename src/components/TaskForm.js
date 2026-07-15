@@ -10,7 +10,7 @@ const STATUS_LABELS = { todo: 'To Do', inprogress: 'In Progress', waiting: 'Wait
 const EFFORTS   = ['2min', '15min', '1hr', 'half-day', 'full-day'];
 const EFFORT_LABELS = { '2min': '2 min', '15min': '15 min', '1hr': '1 hr', 'half-day': 'Half day', 'full-day': 'Full day' };
 
-export function openTaskForm({ task = null, people = [], onSave, onClose }) {
+export function openTaskForm({ task = null, people = [], isSubtask = false, onSave, onClose }) {
   const isEdit = !!task;
 
   const backdrop = document.createElement('div');
@@ -71,13 +71,13 @@ export function openTaskForm({ task = null, people = [], onSave, onClose }) {
               ${people.map(p => `<option value="${p.id}" ${task?.person === p.id ? 'selected' : (p.id === 'self' && !task ? 'selected' : '')}>${p.name}</option>`).join('')}
             </select>
           </div>
-          <div class="form-group">
+          <div class="form-group" style="${isSubtask ? 'display:none' : ''}">
             <label class="form-label" for="ft-category">Category</label>
             <input class="form-input" id="ft-category" type="text" placeholder="e.g. Health, Work, Finance" value="${esc(task?.category || '')}" />
           </div>
         </div>
 
-        <div class="form-group">
+        <div class="form-group" style="${isSubtask ? 'display:none' : ''}">
           <label class="form-label" for="ft-location"><i class="uil uil-map-marker" style="margin-right:2px;color:var(--text-secondary)"></i> Location Trigger</label>
           <select class="form-select form-input" id="ft-location">
             <option value="">— No location trigger —</option>
@@ -98,7 +98,7 @@ export function openTaskForm({ task = null, people = [], onSave, onClose }) {
   document.getElementById('ft-title').focus();
 
   function collect() {
-    return {
+    const res = {
       title:           document.getElementById('ft-title').value.trim(),
       notes:           document.getElementById('ft-notes').value.trim(),
       priority:        document.getElementById('ft-priority').value,
@@ -106,9 +106,12 @@ export function openTaskForm({ task = null, people = [], onSave, onClose }) {
       effort:          document.getElementById('ft-effort').value,
       dueDate:         document.getElementById('ft-due').value,
       person:          document.getElementById('ft-person').value,
-      category:        document.getElementById('ft-category').value.trim(),
-      locationTrigger: document.getElementById('ft-location').value,
     };
+    if (!isSubtask) {
+      res.category = document.getElementById('ft-category').value.trim();
+      res.locationTrigger = document.getElementById('ft-location').value;
+    }
+    return res;
   }
 
   function close() {

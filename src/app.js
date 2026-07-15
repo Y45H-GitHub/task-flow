@@ -38,6 +38,10 @@ export function initApp(root) {
   updateHeaderStats();
   store.subscribe(updateHeaderStats);
   switchTab('tasks');
+
+  if (localStorage.getItem('flowtask_loc_alerts') === 'true') {
+    startLocationAlerts();
+  }
 }
 
 function buildShell() {
@@ -203,4 +207,41 @@ export function showToast(message, type = 'info') {
     toast.style.transform = 'translateY(8px)';
     setTimeout(() => toast.remove(), 300);
   }, 3000);
+}
+
+let _locationIntervalId = null;
+const _alertedTaskIds = new Set();
+
+export function startLocationAlerts() {
+  if (_locationIntervalId) clearInterval(_locationIntervalId);
+
+  const check = () => {
+    const activeAlerts = localStorage.getItem('flowtask_loc_alerts') === 'true';
+    if (!activeAlerts) {
+      stopLocationAlerts();
+      return;
+    }
+
+    const { tasks } = store.state;
+    import('./utils/locationUtils.js').then(({ runLocationCheck }) => {
+      runLocationCheck(tasks, (matchedTasks) => {
+        matchedTasks.forEach(task => {
+          if (!_alertedTaskIds.has(task.id)) {
+            _alertedTaskIds.add(task.id);
+            showToast(`📍 Nearby shop detected for task: "${task.title}"`, 'success');
+          }
+        });
+      });
+    });
+  };
+
+  check();
+  _locationIntervalId = setInterval(check, 60000);
+}
+
+export function stopLocationAlerts() {
+  if (_locationIntervalId) {
+    clearInterval(_locationIntervalId);
+    _locationIntervalId = null;
+  }
 }
