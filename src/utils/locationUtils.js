@@ -269,25 +269,53 @@ export function getCurrentPosition() {
 }
 
 /**
+ * Haversine great-circle distance between two coordinates.
+ * @returns distance in metres
+ */
+export function haversineDistance(lat1, lng1, lat2, lng2) {
+  const R  = 6_371_000; // Earth radius in metres
+  const φ1 = (lat1 * Math.PI) / 180;
+  const φ2 = (lat2 * Math.PI) / 180;
+  const Δφ = ((lat2 - lat1) * Math.PI) / 180;
+  const Δλ = ((lng2 - lng1) * Math.PI) / 180;
+  const a  = Math.sin(Δφ / 2) ** 2 + Math.cos(φ1) * Math.cos(φ2) * Math.sin(Δλ / 2) ** 2;
+  return R * 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
+}
+
+/**
  * Check a single category near the user's current position.
  * Used by the per-type "Near Me?" button on the Places tab.
  *
- * @returns {{ found: boolean, shopNames: string[] }}
+ * @returns {{ found: boolean, shops: Array<{name:string|null, lat:number, lng:number, distance:number, osmType:string}> }}
+ *   shops is sorted by distance ascending, capped at 8.
  */
 export async function getNearbyShopsForCategory(lat, lng, categoryId) {
   const pt = getPlaceType(categoryId);
-  if (!pt?.osm?.length) return { found: false, shopNames: [] };
+  if (!pt?.osm?.length) return { found: false, shops: [] };
 
   const query    = buildOverpassQuery(pt.osm, lat, lng, getRadius());
   const elements = await runOverpassQuery(query);
 
-  const shopNames = elements
-    .map(el => el.tags?.name)
-    .filter(Boolean)
-    .slice(0, 4); // cap at 4 names to keep the toast readable
+  const shops = elements
+    .filter(el => el.lat != null && el.lon != null)
+    .map(el => {
+      const tags    = el.tags ?? {};
+      const osmType = tags.amenity ?? tags.shop ?? tags.craft ?? null;
+      return {
+        name    : tags.name ?? tags['name:en'] ?? null,
+        lat     : el.lat,
+        lng     : el.lon,
+        distance: Math.round(haversineDistance(lat, lng, el.lat, el.lon)),
+        osmType,
+        tags,
+      };
+    })
+    .sort((a, b) => a.distance - b.distance)
+    .slice(0, 8);
 
-  return { found: elements.length > 0, shopNames };
+  return { found: shops.length > 0, shops };
 }
+
 
 /**
  * Get all nearby place type IDs in one round-trip.

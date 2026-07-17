@@ -7,6 +7,9 @@ import { timeAgo } from '../utils/dateUtils.js';
 import { showToast, startLocationAlerts, stopLocationAlerts } from '../app.js';
 
 export function mountPlacesView(container) {
+  // Persists nearby shop results across re-renders (store updates shouldn't wipe the list).
+  const nearbyResults = new Map(); // typeId → { shops, checkedAt }
+
   function render() {
     const { tasks, items } = store.state;
     container.innerHTML = '';
@@ -137,8 +140,15 @@ export function mountPlacesView(container) {
               </div>
             `).join('')}
           </div>
+          <div class="nearby-shops-list" id="nearby-shops-${typeId}"></div>
         `;
         leftCol.appendChild(group);
+
+        // Restore cached results (survives store re-renders)
+        if (nearbyResults.has(typeId)) {
+          const cached = nearbyResults.get(typeId);
+          renderNearbyShops(group.querySelector(`#nearby-shops-${typeId}`), cached.shops, cached.checkedAt);
+        }
       });
     }
     grid.appendChild(leftCol);
@@ -250,6 +260,69 @@ export function mountPlacesView(container) {
     }
   }
 
+  // ── Nearby shop cards ─────────────────────────────────────────────────────
+
+  function formatDist(m) {
+    if (m < 50)   return '< 50 m';
+    if (m < 1000) return `${m} m`;
+    return `${(m / 1000).toFixed(1)} km`;
+  }
+
+  function mapsUrl(shop) {
+    const q = shop.name ? encodeURIComponent(shop.name) : '';
+    return `https://www.google.com/maps/search/?api=1&query=${q}&center=${shop.lat},${shop.lng}`;
+  }
+
+  function osmUrl(shop) {
+    return `https://www.openstreetmap.org/?mlat=${shop.lat}&mlon=${shop.lng}#map=18/${shop.lat}/${shop.lng}`;
+  }
+
+  function renderNearbyShops(el, shops, checkedAt) {
+    if (!el) return;
+    if (!shops.length) {
+      el.innerHTML = `
+        <div style="padding:10px 0 4px;font-size:0.8rem;color:var(--text-muted);display:flex;align-items:center;gap:6px">
+          <i class="uil uil-map-marker-slash" style="font-size:1rem"></i>
+          No places found in this area. Try a larger radius.
+        </div>`;
+      return;
+    }
+
+    const timeStr = checkedAt ? new Date(checkedAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) : '';
+
+    el.innerHTML = `
+      <div style="margin-top:10px;margin-bottom:6px;display:flex;align-items:center;gap:6px">
+        <i class="uil uil-map-pin" style="color:#fbbf24;font-size:0.9rem"></i>
+        <span style="font-size:0.75rem;font-weight:700;color:var(--text-secondary);text-transform:uppercase;letter-spacing:0.04em">Nearby places</span>
+        ${timeStr ? `<span style="font-size:0.7rem;color:var(--text-muted);margin-left:auto">Checked at ${timeStr}</span>` : ''}
+      </div>
+      <div class="nearby-shop-cards">
+        ${shops.map((shop, i) => {
+          const label   = shop.name ?? `Unnamed ${shop.osmType ?? 'place'}`;
+          const distStr = formatDist(shop.distance);
+          const isClose = shop.distance < 500;
+          return `
+            <div class="nearby-shop-card" style="animation-delay:${i * 40}ms">
+              <div class="nearby-shop-dist" style="color:${isClose ? '#22c55e' : '#fbbf24'}">${distStr}</div>
+              <div class="nearby-shop-body">
+                <div class="nearby-shop-name">${escHtml(label)}</div>
+                ${shop.osmType ? `<div class="nearby-shop-type">${escHtml(shop.osmType.replace(/_/g, ' '))}</div>` : ''}
+              </div>
+              <div class="nearby-shop-actions">
+                <a href="${mapsUrl(shop)}" target="_blank" rel="noopener" class="nearby-map-btn" title="Open in Google Maps" aria-label="Open ${escHtml(label)} in Google Maps">
+                  <i class="uil uil-map"></i>
+                </a>
+                <a href="${osmUrl(shop)}" target="_blank" rel="noopener" class="nearby-map-btn nearby-map-btn--osm" title="Open in OpenStreetMap" aria-label="Open in OpenStreetMap">
+                  <i class="uil uil-globe"></i>
+                </a>
+              </div>
+            </div>`;
+        }).join('')}
+      </div>`;
+  }
+
+  // ─────────────────────────────────────────────────────────────────────────────
+
   async function checkLocationForType(typeId, btn) {
     const pt          = getPlaceType(typeId);
     const originalHtml = btn.innerHTML;
@@ -258,17 +331,26 @@ export function mountPlacesView(container) {
     ensureSpinKeyframe();
 
     try {
-      const { lat, lng }        = await getCurrentPosition();
-      const { found, shopNames } = await getNearbyShopsForCategory(lat, lng, typeId);
-      const { tasks }           = store.state;
-      const relevant            = tasks.filter(t => t.locationTrigger === typeId && t.status !== 'done');
+      const { lat, lng }       = await getCurrentPosition();
+      const { found, shops }   = await getNearbyShopsForCategory(lat, lng, typeId);
+      const { tasks }          = store.state;
+      const relevant           = tasks.filter(t => t.locationTrigger === typeId && t.status !== 'done');
+      const checkedAt          = new Date().toISOString();
+
+      // Cache so the cards survive re-renders
+      nearbyResults.set(typeId, { shops, checkedAt });
+
+      // Inject into the live DOM (no full re-render needed)
+      const shopContainer = container.querySelector(`#nearby-shops-${typeId}`);
+      renderNearbyShops(shopContainer, shops, checkedAt);
 
       if (!found) {
         const r = getRadius();
         const rangeLabel = r >= 1000 ? `${r/1000} km` : `${r} m`;
         showToast(`No ${pt.label} found within ${rangeLabel}.`, 'info');
       } else {
-        const namesStr = shopNames.length ? ` · ${shopNames.join(', ')}` : '';
+        const named    = shops.filter(s => s.name).map(s => s.name);
+        const namesStr = named.length ? ` · ${named.slice(0, 3).join(', ')}` : '';
         showToast(`${pt.label} nearby${namesStr}. ${relevant.length} task${relevant.length !== 1 ? 's' : ''} to do here!`, 'success');
       }
     } catch (err) {

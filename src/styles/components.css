@@ -201,6 +201,107 @@
   border-color: rgba(245 158 11 / 0.3);
 }
 
+/* ── Nearby shop cards ── */
+.nearby-shops-list {
+  padding: 0 var(--sp-4) var(--sp-4);
+}
+
+.nearby-shop-cards {
+  display: flex;
+  flex-direction: column;
+  gap: var(--sp-2);
+}
+
+.nearby-shop-card {
+  display: flex;
+  align-items: center;
+  gap: var(--sp-3);
+  padding: 10px 12px;
+  border-radius: var(--r-md);
+  background: rgba(255 255 255 / 0.03);
+  border: 1px solid var(--border);
+  transition: all var(--t-fast);
+  animation: slide-up 0.25s ease both;
+}
+
+.nearby-shop-card:hover {
+  background: rgba(255 255 255 / 0.06);
+  border-color: var(--border-hover);
+  transform: translateY(-1px);
+}
+
+.nearby-shop-dist {
+  font-size: 0.75rem;
+  font-weight: 800;
+  font-variant-numeric: tabular-nums;
+  min-width: 52px;
+  text-align: center;
+  padding: 3px 8px;
+  border-radius: var(--r-full);
+  background: rgba(255 255 255 / 0.05);
+  flex-shrink: 0;
+  letter-spacing: 0.02em;
+}
+
+.nearby-shop-body {
+  flex: 1;
+  min-width: 0;
+}
+
+.nearby-shop-name {
+  font-size: 0.875rem;
+  font-weight: 600;
+  color: var(--text-primary);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.nearby-shop-type {
+  font-size: 0.7rem;
+  color: var(--text-muted);
+  text-transform: capitalize;
+  margin-top: 1px;
+}
+
+.nearby-shop-actions {
+  display: flex;
+  gap: 6px;
+  flex-shrink: 0;
+}
+
+.nearby-map-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 30px;
+  height: 30px;
+  border-radius: var(--r-md);
+  background: rgba(245 158 11 / 0.08);
+  color: #fbbf24;
+  border: 1px solid rgba(245 158 11 / 0.15);
+  font-size: 0.9rem;
+  transition: all var(--t-fast);
+  text-decoration: none;
+}
+
+.nearby-map-btn:hover {
+  background: rgba(245 158 11 / 0.2);
+  border-color: rgba(245 158 11 / 0.35);
+  transform: scale(1.08);
+}
+
+.nearby-map-btn--osm {
+  background: rgba(99 102 241 / 0.08);
+  color: #818cf8;
+  border-color: rgba(99 102 241 / 0.15);
+}
+
+.nearby-map-btn--osm:hover {
+  background: rgba(99 102 241 / 0.18);
+  border-color: rgba(99 102 241 / 0.3);
+}
+
 /* Item locator */
 .item-locator-container {
   display: flex;
