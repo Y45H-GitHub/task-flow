@@ -597,4 +597,43 @@
 .related-task-title {
   font-size: 0.75rem;
   color: var(--text-secondary);
+}  
+/* ÄÄ Subtask row: children-count pip & drill-in chevron ÄÄ */ 
+
+.subtask-item {
+  cursor: pointer;
+}
+
+.subtask-children-pip {
+  display: inline-flex;
+  align-items: center;
+  gap: 3px;
+  font-size: 0.625rem;
+  font-weight: 700;
+  color: var(--text-muted);
+  padding: 1px 6px;
+  border-radius: 99px;
+  background: rgba(255,255,255,0.04);
+  border: 1px solid rgba(255,255,255,0.07);
+  flex-shrink: 0;
+  margin-left: auto;
+}
+
+.subtask-drill-btn {
+  flex-shrink: 0;
+  background: transparent;
+  border: none;
+  color: var(--text-muted);
+  font-size: 0.75rem;
+  cursor: pointer;
+  padding: 0 2px;
+  display: flex;
+  align-items: center;
+  transition: color var(--t-fast), transform var(--t-fast);
+  opacity: 0;
+}
+
+.subtask-item:hover .subtask-drill-btn {
+  opacity: 1;
+  color: var(--accent);
 }

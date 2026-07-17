@@ -1,0 +1,417 @@
+/* ============================================================
+   FlowTask — Subtask Detail Panel (Side Drawer)
+   aesthetic: dark luxury · layout: side drawer · motion: slide-in
+   ============================================================ */
+
+/* ── Backdrop ── */
+.subtask-panel-backdrop {
+  position: fixed;
+  inset: 0;
+  background: rgba(0, 0, 0, 0.55);
+  z-index: 200;
+  opacity: 0;
+  transition: opacity 0.25s ease;
+  backdrop-filter: blur(2px);
+}
+
+.subtask-panel-backdrop.visible {
+  opacity: 1;
+}
+
+/* ── Panel Shell ── */
+.subtask-panel {
+  position: fixed;
+  top: 0;
+  right: 0;
+  bottom: 0;
+  width: min(440px, 100vw);
+  background: var(--bg-surface, #111118);
+  border-left: 1px solid var(--border, rgba(255,255,255,0.07));
+  display: flex;
+  flex-direction: column;
+  z-index: 201;
+  transform: translateX(100%);
+  transition: transform 0.28s cubic-bezier(0.32, 0.72, 0, 1);
+  box-shadow: -12px 0 48px rgba(0, 0, 0, 0.6);
+}
+
+.subtask-panel.visible {
+  transform: translateX(0);
+}
+
+/* ── Panel Header ── */
+.subtask-panel-header {
+  display: flex;
+  align-items: flex-start;
+  gap: 12px;
+  padding: 20px 20px 16px;
+  border-bottom: 1px solid var(--border, rgba(255,255,255,0.06));
+  flex-shrink: 0;
+}
+
+.subtask-panel-breadcrumb {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 4px;
+}
+
+.subtask-panel-crumb {
+  font-size: 0.75rem;
+  color: var(--text-muted);
+  cursor: pointer;
+  border: none;
+  background: none;
+  padding: 2px 4px;
+  border-radius: 4px;
+  max-width: 120px;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  transition: color 0.15s;
+}
+
+.subtask-panel-crumb:hover {
+  color: var(--text-secondary);
+}
+
+.subtask-panel-crumb.current {
+  color: var(--text-primary);
+  font-weight: 700;
+  cursor: default;
+}
+
+.subtask-panel-crumb-sep {
+  color: var(--text-muted);
+  font-size: 0.75rem;
+  flex-shrink: 0;
+  user-select: none;
+}
+
+.subtask-panel-close {
+  width: 32px;
+  height: 32px;
+  flex-shrink: 0;
+  border-radius: 8px;
+  background: transparent;
+  border: 1px solid var(--border, rgba(255,255,255,0.07));
+  color: var(--text-muted);
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 1rem;
+  transition: all 0.15s;
+}
+
+.subtask-panel-close:hover {
+  background: rgba(255,255,255,0.04);
+  color: var(--text-primary);
+}
+
+/* ── Panel Body ── */
+.subtask-panel-body {
+  flex: 1;
+  overflow-y: auto;
+  overflow-x: hidden;
+  padding: 20px;
+  display: flex;
+  flex-direction: column;
+  gap: 20px;
+  scrollbar-width: thin;
+  scrollbar-color: rgba(255,255,255,0.08) transparent;
+}
+
+/* ── Node Fields (read-only summary card) ── */
+.subtask-panel-fields {
+  background: rgba(255,255,255,0.02);
+  border: 1px solid var(--border, rgba(255,255,255,0.06));
+  border-radius: 12px;
+  padding: 16px;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.subtask-panel-title {
+  font-size: 1rem;
+  font-weight: 700;
+  color: var(--text-primary);
+  line-height: 1.4;
+  letter-spacing: -0.01em;
+}
+
+.subtask-panel-notes {
+  font-size: 0.8125rem;
+  color: var(--text-secondary);
+  line-height: 1.6;
+  white-space: pre-wrap;
+  padding: 8px 10px;
+  background: rgba(0,0,0,0.2);
+  border-radius: 6px;
+  border: 1px solid rgba(255,255,255,0.02);
+}
+
+.subtask-panel-meta {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  align-items: center;
+}
+
+.subtask-panel-edit-btn {
+  margin-top: 4px;
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 6px 14px;
+  border-radius: 8px;
+  border: 1px solid var(--border, rgba(255,255,255,0.07));
+  background: transparent;
+  color: var(--text-secondary);
+  font-size: 0.8125rem;
+  cursor: pointer;
+  transition: all 0.15s;
+  align-self: flex-start;
+}
+
+.subtask-panel-edit-btn:hover {
+  background: rgba(255,255,255,0.04);
+  color: var(--text-primary);
+  border-color: var(--border-hover);
+}
+
+/* ── Children Section ── */
+.subtask-panel-children {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.subtask-panel-children-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+
+.subtask-panel-children-title {
+  font-size: 0.6875rem;
+  font-weight: 700;
+  color: var(--text-muted);
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+}
+
+/* ── Per-level mini progress bar ── */
+.subtask-panel-progress {
+  display: flex;
+  flex-direction: column;
+  gap: 5px;
+}
+
+.subtask-panel-progress-text {
+  display: flex;
+  justify-content: space-between;
+  font-size: 0.6875rem;
+  font-weight: 700;
+  color: var(--text-secondary);
+}
+
+.subtask-panel-progress-bar-bg {
+  height: 3px;
+  background: rgba(255,255,255,0.05);
+  border-radius: 99px;
+  overflow: hidden;
+}
+
+.subtask-panel-progress-bar-fill {
+  height: 100%;
+  background: var(--accent, #38bdf8);
+  border-radius: 99px;
+  transition: width 0.3s ease;
+}
+
+/* ── Individual subtask rows inside panel ── */
+.subtask-panel-list {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.subtask-panel-item {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 8px 10px;
+  border-radius: 8px;
+  cursor: pointer;
+  transition: background 0.15s;
+  border: 1px solid transparent;
+}
+
+.subtask-panel-item:hover {
+  background: rgba(255,255,255,0.03);
+  border-color: var(--border, rgba(255,255,255,0.05));
+}
+
+.subtask-panel-item.done .subtask-panel-item-title {
+  text-decoration: line-through;
+  color: var(--text-muted);
+}
+
+.subtask-panel-item-check {
+  width: 16px;
+  height: 16px;
+  flex-shrink: 0;
+  border-radius: 4px;
+  border: 1.5px solid var(--border-hover);
+  background: transparent;
+  color: transparent;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 0.625rem;
+  transition: all 0.15s;
+}
+
+.subtask-panel-item-check:hover {
+  border-color: var(--accent);
+  background: var(--accent-light);
+  color: var(--accent);
+}
+
+.subtask-panel-item.done .subtask-panel-item-check {
+  background: var(--status-done, #22c55e);
+  border-color: var(--status-done, #22c55e);
+  color: white;
+}
+
+.subtask-panel-item-title {
+  flex: 1;
+  font-size: 0.875rem;
+  color: var(--text-primary);
+  min-width: 0;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.subtask-panel-item-child-pip {
+  display: inline-flex;
+  align-items: center;
+  gap: 3px;
+  font-size: 0.6875rem;
+  color: var(--text-muted);
+  flex-shrink: 0;
+  padding: 1px 6px;
+  border-radius: 99px;
+  background: rgba(255,255,255,0.04);
+  border: 1px solid rgba(255,255,255,0.06);
+}
+
+.subtask-panel-item-open {
+  flex-shrink: 0;
+  color: var(--text-muted);
+  font-size: 0.875rem;
+  opacity: 0;
+  transition: opacity 0.15s, color 0.15s;
+}
+
+.subtask-panel-item:hover .subtask-panel-item-open {
+  opacity: 1;
+}
+
+.subtask-panel-item-actions {
+  display: flex;
+  gap: 2px;
+  flex-shrink: 0;
+  opacity: 0;
+  transition: opacity 0.15s;
+}
+
+.subtask-panel-item:hover .subtask-panel-item-actions {
+  opacity: 1;
+}
+
+.subtask-panel-item-action-btn {
+  width: 24px;
+  height: 24px;
+  border-radius: 4px;
+  border: none;
+  background: transparent;
+  color: var(--text-muted);
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 0.75rem;
+  transition: all 0.15s;
+}
+
+.subtask-panel-item-action-btn:hover {
+  background: rgba(255,255,255,0.06);
+  color: var(--text-primary);
+}
+
+.subtask-panel-item-action-btn.delete:hover {
+  background: rgba(239,68,68,0.12);
+  color: #f87171;
+}
+
+/* ── Inline add form at bottom of panel ── */
+.subtask-panel-add-form {
+  display: flex;
+  gap: 8px;
+  align-items: center;
+  margin-top: 4px;
+  padding: 2px 0;
+}
+
+.subtask-panel-add-input {
+  flex: 1;
+  border: none;
+  border-bottom: 1.5px solid var(--border-hover, rgba(255,255,255,0.12));
+  background: transparent;
+  padding: 6px 4px;
+  font-size: 0.875rem;
+  color: var(--text-primary);
+  outline: none;
+  transition: border-color 0.15s;
+}
+
+.subtask-panel-add-input::placeholder {
+  color: var(--text-muted);
+}
+
+.subtask-panel-add-input:focus {
+  border-bottom-color: var(--accent, #38bdf8);
+}
+
+.subtask-panel-add-btn {
+  flex-shrink: 0;
+  padding: 5px 14px;
+  border-radius: 7px;
+  border: 1px solid var(--border-accent, rgba(56,189,248,0.25));
+  background: var(--accent-light, rgba(56,189,248,0.08));
+  color: var(--accent, #38bdf8);
+  font-size: 0.8125rem;
+  font-weight: 700;
+  cursor: pointer;
+  transition: all 0.15s;
+}
+
+.subtask-panel-add-btn:hover {
+  background: var(--accent, #38bdf8);
+  color: #000;
+}
+
+/* ── Empty state ── */
+.subtask-panel-empty {
+  text-align: center;
+  padding: 24px 0 8px;
+  color: var(--text-muted);
+  font-size: 0.8125rem;
+}

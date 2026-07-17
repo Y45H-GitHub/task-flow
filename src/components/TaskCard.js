@@ -5,6 +5,8 @@ import { timeAgo, formatDateTime, formatDateShort, isOverdue, isAging } from '..
 import { getPlaceType } from '../utils/locationUtils.js';
 import { store } from '../store/store.js';
 import { openTaskForm } from './TaskForm.js';
+import { openSubtaskPanel } from './SubtaskPanel.js';
+import { countDirectChildren, countDoneDirectChildren } from '../utils/subtaskUtils.js';
 
 const PRIORITY_COLORS = { P1: 'badge-p1', P2: 'badge-p2', P3: 'badge-p3', P4: 'badge-p4' };
 const STATUS_BADGE = {
@@ -114,12 +116,25 @@ export function createTaskCard(task, person, { onToggle, onEdit, onDelete }) {
       subCheck.innerHTML = sub.status === 'done' ? '<i class="uil uil-check"></i>' : '';
       subCheck.addEventListener('click', (e) => {
         e.stopPropagation();
-        store.toggleSubtask(task.id, sub.id);
+        // Confirm if has children and becoming done
+        const path = [sub.id];
+        const becomingDone = sub.status !== 'done';
+        const hasChildren = (sub.subtasks || []).length > 0;
+        if (becomingDone && hasChildren) {
+          const yes = confirm('Also mark all sub-tasks inside as done?');
+          store.toggleNestedSubtask(task.id, path, yes);
+        } else {
+          store.toggleNestedSubtask(task.id, path, false);
+        }
       });
 
       const subTitle = document.createElement('span');
       subTitle.className = 'subtask-title';
       subTitle.textContent = sub.title;
+
+      // Children count pip
+      const childCount = countDirectChildren(sub);
+      const childDone  = countDoneDirectChildren(sub);
 
       const subActions = document.createElement('div');
       subActions.className = 'subtask-actions';
@@ -134,8 +149,9 @@ export function createTaskCard(task, person, { onToggle, onEdit, onDelete }) {
         openTaskForm({
           task: sub,
           people,
+          isSubtask: true,
           onSave: (data) => {
-            store.updateSubtask(task.id, sub.id, data);
+            store.updateNestedSubtask(task.id, [sub.id], data);
           }
         });
       });
@@ -146,9 +162,22 @@ export function createTaskCard(task, person, { onToggle, onEdit, onDelete }) {
       subDel.title = 'Delete Subtask';
       subDel.addEventListener('click', (e) => {
         e.stopPropagation();
-        if (confirm(`Delete subtask "${sub.title}"?`)) {
-          store.deleteSubtask(task.id, sub.id);
+        const msg = childCount > 0
+          ? `Delete "${sub.title}" and its ${childCount} sub-task(s)?`
+          : `Delete subtask "${sub.title}"?`;
+        if (confirm(msg)) {
+          store.deleteNestedSubtask(task.id, [sub.id]);
         }
+      });
+
+      // Drill-in button — opens SubtaskPanel
+      const drillBtn = document.createElement('button');
+      drillBtn.className = 'subtask-drill-btn';
+      drillBtn.innerHTML = '<i class="uil uil-angle-right"></i>';
+      drillBtn.title = 'Open sub-tasks';
+      drillBtn.addEventListener('click', (e) => {
+        e.stopPropagation();
+        openSubtaskPanel(task.id, [sub.id]);
       });
 
       subActions.appendChild(subEdit);
@@ -156,14 +185,31 @@ export function createTaskCard(task, person, { onToggle, onEdit, onDelete }) {
 
       item.appendChild(subCheck);
       item.appendChild(subTitle);
+
+      // Insert pip if sub has children
+      if (childCount > 0) {
+        const pip = document.createElement('span');
+        pip.className = 'subtask-children-pip';
+        pip.innerHTML = `<i class="uil uil-layer-group" style="font-size:0.625rem"></i> ${childDone}/${childCount}`;
+        item.appendChild(pip);
+      }
+
       item.appendChild(subActions);
+      item.appendChild(drillBtn);
+
+      // Click anywhere on the row (not a button) opens the panel
+      item.addEventListener('click', (e) => {
+        if (e.target.closest('button')) return;
+        openSubtaskPanel(task.id, [sub.id]);
+      });
+
       listContainer.appendChild(item);
     });
 
     subtasksList.appendChild(listContainer);
   }
 
-  // Inline Add Subtask input
+  // Inline Add Subtask input (adds direct child to root task)
   const addSubtaskForm = document.createElement('div');
   addSubtaskForm.className = 'subtask-add-form';
   addSubtaskForm.innerHTML = `

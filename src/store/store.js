@@ -2,6 +2,12 @@
  * store.js — FlowTask LocalStorage State Management
  * Single source of truth. All mutations go through store.update().
  */
+import {
+  insertAtPath,
+  updateAtPath,
+  deleteAtPath,
+  setAllDescendantsStatus,
+} from '../utils/subtaskUtils.js';
 
 const KEY = 'flowtask_data_v2';
 
@@ -101,49 +107,81 @@ export const store = {
     });
   },
 
-  // ── Subtask helpers ──
-  addSubtask(taskId, subtask) {
+  // ── Nested Subtask helpers (infinite depth via path arrays) ──
+  // path: array of subtask IDs from root task's subtasks down to the parent.
+  // e.g. [] means add/modify a direct child of the root task;
+  //      ['sub1']  means add/modify a child of subtask sub1;
+  //      ['sub1', 'sub2'] means child of sub1 > sub2, etc.
+
+  /**
+   * Add a subtask at `path` inside task `taskId`.
+   * path = [] → direct child of root task.
+   */
+  addNestedSubtask(taskId, path, subtask) {
     this.update(s => {
       const task = s.tasks.find(t => t.id === taskId);
       if (!task) return;
-      if (!task.subtasks) task.subtasks = [];
-      task.subtasks.push({
+      const newNode = {
         ...subtask,
         id: crypto.randomUUID(),
         createdAt: new Date().toISOString(),
-        status: subtask.status || 'todo'
+        status: subtask.status || 'todo',
+        subtasks: [],
+      };
+      task.subtasks = insertAtPath(task.subtasks || [], path, newNode);
+    });
+  },
+
+  /**
+   * Update (patch) a subtask located at `path` inside task `taskId`.
+   * path must point to the node itself (the last ID in path is the node's ID).
+   */
+  updateNestedSubtask(taskId, path, patch) {
+    this.update(s => {
+      const task = s.tasks.find(t => t.id === taskId);
+      if (!task) return;
+      task.subtasks = updateAtPath(task.subtasks || [], path, patch);
+    });
+  },
+
+  /**
+   * Delete the subtask at `path` (and all its descendants).
+   */
+  deleteNestedSubtask(taskId, path) {
+    this.update(s => {
+      const task = s.tasks.find(t => t.id === taskId);
+      if (!task) return;
+      task.subtasks = deleteAtPath(task.subtasks || [], path);
+    });
+  },
+
+  /**
+   * Toggle done/todo for the subtask at `path`.
+   * If markChildren is true, also recursively mark all descendants done.
+   */
+  toggleNestedSubtask(taskId, path, markChildren = false) {
+    this.update(s => {
+      const task = s.tasks.find(t => t.id === taskId);
+      if (!task) return;
+      task.subtasks = updateAtPath(task.subtasks || [], path, (node) => {
+        const nowDone = node.status !== 'done';
+        const updated = {
+          ...node,
+          status: nowDone ? 'done' : 'todo',
+          completedAt: nowDone ? new Date().toISOString() : undefined,
+        };
+        if (nowDone && markChildren) {
+          updated.subtasks = setAllDescendantsStatus(node.subtasks, 'done');
+        }
+        return updated;
       });
     });
   },
-  updateSubtask(taskId, subtaskId, patch) {
-    this.update(s => {
-      const task = s.tasks.find(t => t.id === taskId);
-      if (!task || !task.subtasks) return;
-      const sub = task.subtasks.find(sub => sub.id === subtaskId);
-      if (sub) Object.assign(sub, patch);
-    });
-  },
-  deleteSubtask(taskId, subtaskId) {
-    this.update(s => {
-      const task = s.tasks.find(t => t.id === taskId);
-      if (!task || !task.subtasks) return;
-      task.subtasks = task.subtasks.filter(sub => sub.id !== subtaskId);
-    });
-  },
-  toggleSubtask(taskId, subtaskId) {
-    this.update(s => {
-      const task = s.tasks.find(t => t.id === taskId);
-      if (!task || !task.subtasks) return;
-      const sub = task.subtasks.find(sub => sub.id === subtaskId);
-      if (!sub) return;
-      if (sub.status === 'done') {
-        sub.status = 'todo';
-        delete sub.completedAt;
-      } else {
-        sub.status = 'done';
-        sub.completedAt = new Date().toISOString();
-      }
-    });
+
+  // ── Legacy shim — keep addSubtask / toggleSubtask signatures working ──
+  // (existing inline adder on TaskCard still calls these at path=[])
+  addSubtask(taskId, subtask) {
+    this.addNestedSubtask(taskId, [], subtask);
   },
 
   // ── Log helpers ──
