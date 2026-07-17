@@ -83,7 +83,7 @@ export function openTaskForm({ task = null, people = [], isSubtask = false, onSa
             <option value="">— No location trigger —</option>
             ${PLACE_TYPES.map(p => `<option value="${p.id}" ${task?.locationTrigger === p.id ? 'selected' : ''}>${p.label}</option>`).join('')}
           </select>
-          <p style="font-size:0.75rem;color:var(--text-muted);margin-top:4px">Task will surface under Places tab for this location type</p>
+          <p id="ft-location-hint" style="font-size:0.75rem;color:var(--text-muted);margin-top:4px">${task?.locationTrigger ? `Detects: ${PLACE_TYPES.find(p => p.id === task.locationTrigger)?.hint ?? ''}` : 'Task will surface in Places tab when you are near this type of shop'}</p>
         </div>
 
         <div class="modal-footer">
@@ -96,6 +96,18 @@ export function openTaskForm({ task = null, people = [], isSubtask = false, onSa
 
   document.body.appendChild(backdrop);
   document.getElementById('ft-title').focus();
+
+  // Live hint under location trigger dropdown
+  const locationSelect = document.getElementById('ft-location');
+  const locationHint   = document.getElementById('ft-location-hint');
+  if (locationSelect && locationHint) {
+    locationSelect.addEventListener('change', () => {
+      const pt = PLACE_TYPES.find(p => p.id === locationSelect.value);
+      locationHint.textContent = pt
+        ? `Detects: ${pt.hint}`
+        : 'Task will surface in Places tab when you are near this type of shop';
+    });
+  }
 
   function collect() {
     const res = {

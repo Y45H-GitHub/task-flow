@@ -4,18 +4,33 @@
 import { store } from '../store/store.js';
 import { exportTasksCSV, pendingToText, copyToClipboard } from '../utils/exportUtils.js';
 import { isOverdue } from '../utils/dateUtils.js';
-import { showToast } from '../app.js';
+import { showToast, startDueDateReminders, stopDueDateReminders } from '../app.js';
+import {
+  isRemindersEnabled, setRemindersEnabled,
+  getLeadHours, setLeadHours,
+  requestNotificationPermission,
+} from '../utils/notificationUtils.js';
 
 export function mountMoreView(container) {
   function render() {
     const { tasks, logs, items, people } = store.state;
 
-    const total = tasks.length;
-    const pending = tasks.filter(t => t.status !== 'done').length;
-    const done = tasks.filter(t => t.status === 'done').length;
-    const overdue = tasks.filter(t => isOverdue(t.dueDate, t.status)).length;
-    const withLoc = tasks.filter(t => t.locationTrigger && t.status !== 'done').length;
+    const total    = tasks.length;
+    const pending  = tasks.filter(t => t.status !== 'done').length;
+    const done     = tasks.filter(t => t.status === 'done').length;
+    const overdue  = tasks.filter(t => isOverdue(t.dueDate, t.status)).length;
+    const withLoc  = tasks.filter(t => t.locationTrigger && t.status !== 'done').length;
     const logCount = logs.length;
+
+    const remindersEnabled  = isRemindersEnabled();
+    const currentLeadHours  = getLeadHours();
+    const LEAD_OPTIONS = [
+      { value: 0,  label: 'Same day'     },
+      { value: 1,  label: '1 hr before'  },
+      { value: 2,  label: '2 hrs before' },
+      { value: 24, label: '1 day before' },
+      { value: 48, label: '2 days before'},
+    ];
 
     container.innerHTML = `
       <!-- Stats (Adapts to single line on desktop) -->
@@ -100,6 +115,33 @@ export function mountMoreView(container) {
               <div class="more-item-sub">Restore tasks, logs, and items from JSON backup</div>
             </div>
             <span class="more-item-arrow">→</span>
+          </div>
+        </div>
+
+        <!-- Reminders block -->
+        <div class="more-section">
+          <div class="more-section-title">Reminders</div>
+
+          <div class="more-item" style="cursor:default;align-items:flex-start;flex-direction:column;gap:16px;padding:20px 24px;border-bottom:none">
+            <div style="display:flex;align-items:center;justify-content:space-between;width:100%">
+              <div>
+                <div class="more-item-title">Due Date Reminders</div>
+                <div class="more-item-sub" id="reminder-status-text">${remindersEnabled ? 'Reminders are on' : 'Get notified before tasks are due'}</div>
+              </div>
+              <label class="toggle-switch" aria-label="Toggle due date reminders">
+                <input type="checkbox" id="reminders-toggle" ${remindersEnabled ? 'checked' : ''} />
+                <span class="toggle-slider"></span>
+              </label>
+            </div>
+
+            <div id="reminder-lead-section" style="width:100%;${remindersEnabled ? '' : 'display:none'}">
+              <div style="font-size:0.75rem;color:var(--text-muted);font-weight:600;letter-spacing:0.06em;text-transform:uppercase;margin-bottom:10px">Remind me</div>
+              <div style="display:flex;gap:8px;flex-wrap:wrap" id="reminder-lead-chips">
+                ${LEAD_OPTIONS.map(opt => `
+                  <button class="filter-chip${currentLeadHours === opt.value ? ' active' : ''}" data-hours="${opt.value}" id="lead-opt-${opt.value}">${opt.label}</button>
+                `).join('')}
+              </div>
+            </div>
           </div>
         </div>
 
@@ -188,6 +230,50 @@ export function mountMoreView(container) {
         } catch { showToast('Invalid backup file.', 'error'); }
       });
       input.click();
+    });
+
+    // ── Reminders ──────────────────────────────────────────────────────────
+    const remindersToggle = container.querySelector('#reminders-toggle');
+    const leadSection     = container.querySelector('#reminder-lead-section');
+    const statusText      = container.querySelector('#reminder-status-text');
+
+    if (remindersToggle) {
+      remindersToggle.addEventListener('change', async e => {
+        if (e.target.checked) {
+          const permission = await requestNotificationPermission();
+          if (permission === 'unsupported') {
+            showToast('Browser notifications are not supported.', 'error');
+            remindersToggle.checked = false;
+            return;
+          }
+          if (permission === 'denied') {
+            showToast('Notification permission denied — enable it in your browser settings.', 'error');
+            remindersToggle.checked = false;
+            return;
+          }
+          setRemindersEnabled(true);
+          startDueDateReminders();
+          if (leadSection) leadSection.style.display = '';
+          if (statusText)  statusText.textContent = 'Reminders are on';
+          showToast('Due date reminders enabled!', 'success');
+        } else {
+          setRemindersEnabled(false);
+          stopDueDateReminders();
+          if (leadSection) leadSection.style.display = 'none';
+          if (statusText)  statusText.textContent = 'Get notified before tasks are due';
+          showToast('Reminders disabled.', 'info');
+        }
+      });
+    }
+
+    container.querySelectorAll('[data-hours]').forEach(btn => {
+      btn.addEventListener('click', () => {
+        const hours = Number(btn.dataset.hours);
+        setLeadHours(hours);
+        container.querySelectorAll('[data-hours]').forEach(b => b.classList.remove('active'));
+        btn.classList.add('active');
+        showToast(`Reminder lead time: ${btn.textContent.trim()}`, 'success');
+      });
     });
   }
 

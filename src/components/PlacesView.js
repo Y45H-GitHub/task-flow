@@ -2,7 +2,7 @@
  * PlacesView.js — Places + Item Locator tab (Tab 3 — Unicons Adapter)
  */
 import { store } from '../store/store.js';
-import { PLACE_TYPES, getPlaceType, getCurrentPosition, getNearbyPlaceTypes, getRelevantTasks } from '../utils/locationUtils.js';
+import { PLACE_TYPES, getPlaceType, getCurrentPosition, getNearbyPlaceTypes, getNearbyShopsForCategory, getRelevantTasks } from '../utils/locationUtils.js';
 import { timeAgo } from '../utils/dateUtils.js';
 import { showToast, startLocationAlerts, stopLocationAlerts } from '../app.js';
 
@@ -77,6 +77,7 @@ export function mountPlacesView(container) {
             <div>
               <div class="place-name">${pt.label}</div>
               <div class="place-count">${typeTasks.length} task${typeTasks.length !== 1 ? 's' : ''}</div>
+              <div style="font-size:0.6875rem;color:var(--text-muted);margin-top:1px">${pt.hint}</div>
             </div>
             <button class="location-check-btn" data-type="${typeId}"><i class="uil uil-rss" style="margin-right:2px"></i> Near Me?</button>
           </div>
@@ -138,7 +139,7 @@ export function mountPlacesView(container) {
 
     // Bind Near Me? buttons
     container.querySelectorAll('.location-check-btn').forEach(btn => {
-      btn.addEventListener('click', () => checkLocationForType(btn.dataset.type));
+      btn.addEventListener('click', () => checkLocationForType(btn.dataset.type, btn));
     });
   }
 
@@ -187,11 +188,44 @@ export function mountPlacesView(container) {
     }
   }
 
-  function checkLocationForType(typeId) {
-    const { tasks } = store.state;
-    const relevant = tasks.filter(t => t.locationTrigger === typeId && t.status !== 'done');
-    const pt = getPlaceType(typeId);
-    showToast(`${relevant.length} task${relevant.length !== 1 ? 's' : ''} active for ${pt.label}`, 'success');
+  function ensureSpinKeyframe() {
+    if (!document.getElementById('spin-keyframe')) {
+      const style = document.createElement('style');
+      style.id = 'spin-keyframe';
+      style.textContent = '@keyframes spin { 100% { transform: rotate(360deg); } }';
+      document.head.appendChild(style);
+    }
+  }
+
+  async function checkLocationForType(typeId, btn) {
+    const pt          = getPlaceType(typeId);
+    const originalHtml = btn.innerHTML;
+    btn.innerHTML = '<i class="uil uil-spinner-alt" style="display:inline-block;animation:spin 1s linear infinite;margin-right:2px"></i>';
+    btn.disabled  = true;
+    ensureSpinKeyframe();
+
+    try {
+      const { lat, lng }        = await getCurrentPosition();
+      const { found, shopNames } = await getNearbyShopsForCategory(lat, lng, typeId);
+      const { tasks }           = store.state;
+      const relevant            = tasks.filter(t => t.locationTrigger === typeId && t.status !== 'done');
+
+      if (!found) {
+        showToast(`No ${pt.label} found within 500m.`, 'info');
+      } else {
+        const namesStr = shopNames.length ? ` · ${shopNames.join(', ')}` : '';
+        showToast(`${pt.label} nearby${namesStr}. ${relevant.length} task${relevant.length !== 1 ? 's' : ''} to do here!`, 'success');
+      }
+    } catch (err) {
+      if (err.code === 1) {
+        showToast('Location permission denied — enable it in browser settings.', 'error');
+      } else {
+        showToast('Could not get location. Please try again.', 'error');
+      }
+    } finally {
+      btn.innerHTML = originalHtml;
+      btn.disabled  = false;
+    }
   }
 
   function showAddItemModal() {

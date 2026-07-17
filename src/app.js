@@ -10,6 +10,15 @@ import { mountLogView }    from './components/LogView.js';
 import { mountMoreView }   from './components/MoreView.js';
 import { openTaskForm }    from './components/TaskForm.js';
 import { isOverdue }       from './utils/dateUtils.js';
+import { runLocationCheck } from './utils/locationUtils.js';
+import {
+  isRemindersEnabled,
+  getLeadHours,
+  checkDueDateReminders,
+  markNotified,
+  clearExpiredNotifications,
+  sendNotification,
+} from './utils/notificationUtils.js';
 
 const TABS = [
   { id: 'tasks',   label: 'Tasks',  icon: 'uil-clipboard-notes' },
@@ -41,6 +50,9 @@ export function initApp(root) {
 
   if (localStorage.getItem('flowtask_loc_alerts') === 'true') {
     startLocationAlerts();
+  }
+  if (isRemindersEnabled()) {
+    startDueDateReminders();
   }
 }
 
@@ -209,39 +221,84 @@ export function showToast(message, type = 'info') {
   }, 3000);
 }
 
+// ── Location Alerts ────────────────────────────────────────────────────────
+
 let _locationIntervalId = null;
-const _alertedTaskIds = new Set();
+const _alertedTaskIds   = new Set();
 
 export function startLocationAlerts() {
   if (_locationIntervalId) clearInterval(_locationIntervalId);
 
   const check = () => {
-    const activeAlerts = localStorage.getItem('flowtask_loc_alerts') === 'true';
-    if (!activeAlerts) {
+    if (localStorage.getItem('flowtask_loc_alerts') !== 'true') {
       stopLocationAlerts();
       return;
     }
-
     const { tasks } = store.state;
-    import('./utils/locationUtils.js').then(({ runLocationCheck }) => {
-      runLocationCheck(tasks, (matchedTasks) => {
-        matchedTasks.forEach(task => {
-          if (!_alertedTaskIds.has(task.id)) {
-            _alertedTaskIds.add(task.id);
-            showToast(`📍 Nearby shop detected for task: "${task.title}"`, 'success');
-          }
-        });
+    runLocationCheck(tasks, matchedTasks => {
+      matchedTasks.forEach(task => {
+        if (!_alertedTaskIds.has(task.id)) {
+          _alertedTaskIds.add(task.id);
+          showToast(`Nearby shop for: "${task.title}"`, 'success');
+        }
       });
     });
   };
 
   check();
-  _locationIntervalId = setInterval(check, 60000);
+  _locationIntervalId = setInterval(check, 60 * 1000);
 }
 
 export function stopLocationAlerts() {
   if (_locationIntervalId) {
     clearInterval(_locationIntervalId);
     _locationIntervalId = null;
+  }
+}
+
+// ── Due-date Reminder Loop ─────────────────────────────────────────────────
+
+let _reminderIntervalId = null;
+
+export function startDueDateReminders() {
+  if (_reminderIntervalId) clearInterval(_reminderIntervalId);
+
+  const check = () => {
+    if (!isRemindersEnabled()) {
+      stopDueDateReminders();
+      return;
+    }
+    clearExpiredNotifications();
+    const { tasks } = store.state;
+    const leadHours  = getLeadHours();
+    const toNotify   = checkDueDateReminders(tasks, leadHours);
+
+    toNotify.forEach(task => {
+      const [y, m, d] = task.dueDate.split('-').map(Number);
+      const dueStart  = new Date(y, m - 1, d, 0, 0, 0, 0);
+      const hoursLeft = Math.round((dueStart - Date.now()) / (1000 * 60 * 60));
+      const timeLabel = hoursLeft <= 0
+        ? 'today (overdue or due now)'
+        : hoursLeft < 24
+          ? `in ${hoursLeft} hour${hoursLeft !== 1 ? 's' : ''}`
+          : `in ${Math.round(hoursLeft / 24)} day${Math.round(hoursLeft / 24) !== 1 ? 's' : ''}`;
+
+      sendNotification(
+        `FlowTask: "${task.title}"`,
+        `Due ${timeLabel}${task.notes ? ` — ${task.notes}` : ''}`,
+        `flowtask-reminder-${task.id}`,
+      );
+      markNotified(task.id, task.dueDate);
+    });
+  };
+
+  check(); // run once immediately
+  _reminderIntervalId = setInterval(check, 5 * 60 * 1000); // every 5 minutes
+}
+
+export function stopDueDateReminders() {
+  if (_reminderIntervalId) {
+    clearInterval(_reminderIntervalId);
+    _reminderIntervalId = null;
   }
 }
