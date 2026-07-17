@@ -7,8 +7,18 @@
  * false positives. This version builds precise Overpass QL queries from tag descriptors.
  */
 
-const OVERPASS_URL    = 'https://overpass-api.de/api/interpreter';
-const DEFAULT_RADIUS  = 500; // metres
+const OVERPASS_URL     = 'https://overpass-api.de/api/interpreter';
+const RADIUS_KEY       = 'flowtask_loc_radius';
+const DEFAULT_RADIUS   = 2000; // metres
+
+export function getRadius() {
+  const stored = parseInt(localStorage.getItem(RADIUS_KEY), 10);
+  return Number.isFinite(stored) && stored > 0 ? stored : DEFAULT_RADIUS;
+}
+
+export function setRadius(metres) {
+  localStorage.setItem(RADIUS_KEY, String(metres));
+}
 
 /**
  * PLACE_TYPES
@@ -184,7 +194,7 @@ export async function getNearbyShopsForCategory(lat, lng, categoryId) {
   const pt = getPlaceType(categoryId);
   if (!pt?.osm?.length) return { found: false, shopNames: [] };
 
-  const query    = buildOverpassQuery(pt.osm, lat, lng);
+  const query    = buildOverpassQuery(pt.osm, lat, lng, getRadius());
   const elements = await runOverpassQuery(query);
 
   const shopNames = elements
@@ -202,7 +212,7 @@ export async function getNearbyShopsForCategory(lat, lng, categoryId) {
 export async function getNearbyPlaceTypes(lat, lng) {
   // One big union query covering all categories
   const allTags  = PLACE_TYPES.flatMap(pt => pt.osm);
-  const query    = buildOverpassQuery(allTags, lat, lng);
+  const query    = buildOverpassQuery(allTags, lat, lng, getRadius());
   const elements = await runOverpassQuery(query);
 
   const detectedTypes = new Set();

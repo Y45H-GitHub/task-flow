@@ -2,7 +2,7 @@
  * PlacesView.js — Places + Item Locator tab (Tab 3 — Unicons Adapter)
  */
 import { store } from '../store/store.js';
-import { PLACE_TYPES, getPlaceType, getCurrentPosition, getNearbyPlaceTypes, getNearbyShopsForCategory, getRelevantTasks } from '../utils/locationUtils.js';
+import { PLACE_TYPES, getPlaceType, getCurrentPosition, getNearbyPlaceTypes, getNearbyShopsForCategory, getRelevantTasks, getRadius, setRadius } from '../utils/locationUtils.js';
 import { timeAgo } from '../utils/dateUtils.js';
 import { showToast, startLocationAlerts, stopLocationAlerts } from '../app.js';
 
@@ -36,10 +36,57 @@ export function mountPlacesView(container) {
           <span class="toggle-slider"></span>
         </label>
       </div>
+      <div style="height:1px;background:rgba(245 158 11/0.15)"></div>
+      <div style="display:flex;align-items:center;justify-content:space-between;gap:12px;width:100%">
+        <div style="font-size:0.8125rem;color:var(--text-primary);display:flex;align-items:center;gap:6px">
+          <i class="uil uil-focus-target" style="color:#fbbf24"></i> Search radius
+        </div>
+        <div id="radius-picker" style="display:flex;gap:6px;flex-wrap:wrap">
+          ${[500,1000,2000,5000].map(r => {
+            const active = getRadius() === r;
+            const label  = r >= 1000 ? `${r/1000} km` : `${r} m`;
+            return `<button
+              class="radius-pill${active ? ' active' : ''}"
+              data-radius="${r}"
+              style="
+                padding:4px 12px;
+                border-radius:999px;
+                font-size:0.75rem;
+                font-weight:600;
+                cursor:pointer;
+                border:1px solid ${active ? '#fbbf24' : 'rgba(245 158 11/0.2)'};
+                background:${active ? 'rgba(245 158 11/0.2)' : 'transparent'};
+                color:${active ? '#fbbf24' : 'var(--text-secondary)'};
+                transition:all 0.15s;
+              "
+            >${label}</button>`;
+          }).join('')}
+        </div>
+      </div>
     `;
     container.appendChild(locBanner);
     locBanner.querySelector('#check-location-btn').addEventListener('click', checkLocation);
     locBanner.querySelector('#location-alerts-toggle').addEventListener('change', toggleLocationAlerts);
+
+    // Radius picker
+    locBanner.querySelectorAll('.radius-pill').forEach(pill => {
+      pill.addEventListener('click', () => {
+        setRadius(parseInt(pill.dataset.radius, 10));
+        // re-style all pills without a full re-render
+        locBanner.querySelectorAll('.radius-pill').forEach(p => {
+          const chosen = p === pill;
+          p.style.border    = `1px solid ${chosen ? '#fbbf24' : 'rgba(245 158 11/0.2)'}`;
+          p.style.background = chosen ? 'rgba(245 158 11/0.2)' : 'transparent';
+          p.style.color      = chosen ? '#fbbf24' : 'var(--text-secondary)';
+          p.classList.toggle('active', chosen);
+        });
+        const label = parseInt(pill.dataset.radius, 10) >= 1000
+          ? `${parseInt(pill.dataset.radius, 10)/1000} km`
+          : `${pill.dataset.radius} m`;
+        showToast(`Search radius set to ${label}`, 'success');
+      });
+    });
+
 
     // Grid container to hold both bento sections
     const grid = document.createElement('div');
@@ -211,7 +258,9 @@ export function mountPlacesView(container) {
       const relevant            = tasks.filter(t => t.locationTrigger === typeId && t.status !== 'done');
 
       if (!found) {
-        showToast(`No ${pt.label} found within 500m.`, 'info');
+        const r = getRadius();
+        const rangeLabel = r >= 1000 ? `${r/1000} km` : `${r} m`;
+        showToast(`No ${pt.label} found within ${rangeLabel}.`, 'info');
       } else {
         const namesStr = shopNames.length ? ` · ${shopNames.join(', ')}` : '';
         showToast(`${pt.label} nearby${namesStr}. ${relevant.length} task${relevant.length !== 1 ? 's' : ''} to do here!`, 'success');
