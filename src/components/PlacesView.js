@@ -2,7 +2,7 @@
  * PlacesView.js — Places + Item Locator tab (Tab 3 — Unicons Adapter)
  */
 import { store } from '../store/store.js';
-import { PLACE_TYPES, getPlaceType, getCurrentPosition, getNearbyPlaceTypes, getNearbyShopsForCategory, getRelevantTasks, getRadius, setRadius } from '../utils/locationUtils.js';
+import { PLACE_TYPES, getPlaceType, getCurrentPosition, getNearbyPlaceTypes, getNearbyShopsForCategory, getRelevantTasks, getRadius, setRadius, getLocationOverride, setLocationOverride, clearLocationOverride } from '../utils/locationUtils.js';
 import { timeAgo } from '../utils/dateUtils.js';
 import { showToast, startLocationAlerts, stopLocationAlerts } from '../app.js';
 
@@ -66,10 +66,15 @@ export function mountPlacesView(container) {
           }).join('')}
         </div>
       </div>
+      <div style="height:1px;background:rgba(245 158 11/0.15)"></div>
+      <div style="display:flex;align-items:center;justify-content:space-between;gap:12px;width:100%" id="loc-source-row">
+        ${buildLocSourceRow()}
+      </div>
     `;
     container.appendChild(locBanner);
     locBanner.querySelector('#check-location-btn').addEventListener('click', checkLocation);
     locBanner.querySelector('#location-alerts-toggle').addEventListener('change', toggleLocationAlerts);
+    locBanner.querySelector('#loc-override-btn').addEventListener('click', () => showLocationOverrideModal(locBanner));
 
     // Radius picker
     locBanner.querySelectorAll('.radius-pill').forEach(pill => {
@@ -367,6 +372,149 @@ export function mountPlacesView(container) {
       btn.innerHTML = originalHtml;
       btn.disabled  = false;
     }
+  }
+
+  // ── Location override helpers ──────────────────────────────────────────────
+
+  function buildLocSourceRow() {
+    const ov = getLocationOverride();
+    if (ov) {
+      const coordStr = `${ov.lat.toFixed(4)}, ${ov.lng.toFixed(4)}`;
+      return `
+        <div style="font-size:0.8125rem;color:var(--text-primary);display:flex;align-items:center;gap:6px;min-width:0">
+          <i class="uil uil-edit-alt" style="color:#fbbf24;flex-shrink:0"></i>
+          <div style="min-width:0">
+            <div style="font-weight:600;color:#fbbf24;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">
+              ${escHtml(ov.label || coordStr)}
+            </div>
+            <div style="font-size:0.7rem;color:var(--text-muted)">${coordStr} &middot; Manual override</div>
+          </div>
+        </div>
+        <div style="display:flex;gap:6px;flex-shrink:0">
+          <button id="loc-override-btn" style="padding:4px 10px;border-radius:var(--r-full);font-size:0.75rem;font-weight:600;cursor:pointer;border:1px solid rgba(245 158 11/0.25);background:rgba(245 158 11/0.08);color:#fbbf24">Edit</button>
+          <button id="loc-clear-btn" style="padding:4px 10px;border-radius:var(--r-full);font-size:0.75rem;font-weight:600;cursor:pointer;border:1px solid rgba(239 68 68/0.25);background:rgba(239 68 68/0.08);color:#f87171">Use GPS</button>
+        </div>`;
+    }
+    return `
+      <div style="font-size:0.8125rem;color:var(--text-primary);display:flex;align-items:center;gap:6px">
+        <i class="uil uil-signal" style="color:#fbbf24"></i>
+        <span>Your location: <strong style="color:#fbbf24">GPS auto-detect</strong></span>
+      </div>
+      <button id="loc-override-btn" style="padding:4px 12px;border-radius:var(--r-full);font-size:0.75rem;font-weight:600;cursor:pointer;border:1px solid rgba(245 158 11/0.2);background:transparent;color:var(--text-secondary)">Set manually</button>`;
+  }
+
+  function refreshLocSourceRow(locBanner) {
+    const row = locBanner.querySelector('#loc-source-row');
+    if (!row) return;
+    row.innerHTML = buildLocSourceRow();
+    row.querySelector('#loc-override-btn')?.addEventListener('click', () => showLocationOverrideModal(locBanner));
+    row.querySelector('#loc-clear-btn')?.addEventListener('click', () => {
+      clearLocationOverride();
+      refreshLocSourceRow(locBanner);
+      showToast('Switched back to GPS auto-detect', 'info');
+    });
+  }
+
+  function showLocationOverrideModal(locBanner) {
+    const backdrop = document.createElement('div');
+    backdrop.className = 'modal-backdrop';
+    backdrop.innerHTML = `
+      <div class="modal" style="border-radius:var(--r-xl);max-width:480px">
+        <div class="modal-handle"></div>
+        <div class="modal-header">
+          <h2 class="modal-title"><i class="uil uil-map-marker" style="color:var(--accent)"></i> Set Your Location</h2>
+          <button class="modal-close" id="lom-close">&#10005;</button>
+        </div>
+        <div class="modal-body">
+          <p style="font-size:0.8125rem;color:var(--text-secondary);margin-bottom:14px">
+            Search for an address or place name. The result will be used for all location checks instead of GPS.
+          </p>
+          <div style="display:flex;gap:8px;margin-bottom:12px">
+            <input class="form-input" id="lom-query" type="text"
+              placeholder="e.g. Bandra, Mumbai or CP, New Delhi"
+              style="flex:1" autocomplete="off" />
+            <button class="btn btn-primary" id="lom-search" style="flex-shrink:0">
+              <i class="uil uil-search"></i> Search
+            </button>
+          </div>
+          <div id="lom-results" style="display:flex;flex-direction:column;gap:6px;max-height:260px;overflow-y:auto"></div>
+          <div id="lom-status" style="font-size:0.8rem;color:var(--text-muted);padding:4px 0"></div>
+          <div class="modal-footer" style="margin-top:14px">
+            <button class="btn btn-ghost" id="lom-cancel">Cancel</button>
+            <button class="btn" id="lom-use-gps"
+              style="background:rgba(99 102 241/0.1);color:#818cf8;border:1px solid rgba(99 102 241/0.2)">
+              <i class="uil uil-signal"></i> Use GPS instead
+            </button>
+          </div>
+        </div>
+      </div>`;
+    document.body.appendChild(backdrop);
+
+    const queryInput = backdrop.querySelector('#lom-query');
+    const resultsEl  = backdrop.querySelector('#lom-results');
+    const statusEl   = backdrop.querySelector('#lom-status');
+
+    function close() { backdrop.remove(); }
+    backdrop.querySelector('#lom-close').onclick  = close;
+    backdrop.querySelector('#lom-cancel').onclick = close;
+    backdrop.addEventListener('click', e => { if (e.target === backdrop) close(); });
+
+    backdrop.querySelector('#lom-use-gps').onclick = () => {
+      clearLocationOverride();
+      refreshLocSourceRow(locBanner);
+      showToast('Switched back to GPS auto-detect', 'info');
+      close();
+    };
+
+    async function doSearch() {
+      const q = queryInput.value.trim();
+      if (!q) return;
+      statusEl.textContent = 'Searching…';
+      resultsEl.innerHTML  = '';
+      backdrop.querySelector('#lom-search').disabled = true;
+
+      try {
+        const url  = `https://nominatim.openstreetmap.org/search?q=${encodeURIComponent(q)}&format=json&limit=6&addressdetails=1`;
+        const res  = await fetch(url, { headers: { 'Accept-Language': 'en' } });
+        const data = await res.json();
+
+        if (!data.length) {
+          statusEl.textContent = 'No results found. Try a different term.';
+          return;
+        }
+        statusEl.textContent = `${data.length} result${data.length !== 1 ? 's' : ''} found:`;
+
+        data.forEach(place => {
+          const lat  = parseFloat(place.lat);
+          const lng  = parseFloat(place.lon);
+          const name = place.display_name;
+          const shortName = name.split(',').slice(0, 3).join(',').trim();
+
+          const item = document.createElement('button');
+          item.style.cssText = 'display:flex;flex-direction:column;align-items:flex-start;gap:2px;padding:10px 12px;border-radius:var(--r-md);background:rgba(255 255 255/0.03);border:1px solid var(--border);cursor:pointer;text-align:left;width:100%;transition:background 0.15s';
+          item.innerHTML = `
+            <span style="font-size:0.875rem;font-weight:600;color:var(--text-primary)">${escHtml(shortName)}</span>
+            <span style="font-size:0.7rem;color:var(--text-muted)">${lat.toFixed(5)}, ${lng.toFixed(5)}</span>`;
+          item.onmouseenter = () => item.style.background = 'rgba(245 158 11/0.08)';
+          item.onmouseleave = () => item.style.background = 'rgba(255 255 255/0.03)';
+          item.onclick = () => {
+            setLocationOverride(lat, lng, shortName);
+            refreshLocSourceRow(locBanner);
+            showToast(`Location set to ${shortName}`, 'success');
+            close();
+          };
+          resultsEl.appendChild(item);
+        });
+      } catch (err) {
+        statusEl.textContent = 'Search failed. Check your connection and try again.';
+      } finally {
+        backdrop.querySelector('#lom-search').disabled = false;
+      }
+    }
+
+    backdrop.querySelector('#lom-search').onclick = doSearch;
+    queryInput.addEventListener('keydown', e => { if (e.key === 'Enter') doSearch(); });
+    queryInput.focus();
   }
 
   function showAddItemModal() {

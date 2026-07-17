@@ -16,6 +16,7 @@ const OVERPASS_ENDPOINTS = [
 const RADIUS_KEY     = 'flowtask_loc_radius';
 const DEFAULT_RADIUS = 2000; // metres
 const RETRY_DELAY_MS = 2000;
+const LOC_OVERRIDE_KEY = 'flowtask_loc_override'; // { lat, lng, label }
 
 export function getRadius() {
   const stored = parseInt(localStorage.getItem(RADIUS_KEY), 10);
@@ -24,6 +25,28 @@ export function getRadius() {
 
 export function setRadius(metres) {
   localStorage.setItem(RADIUS_KEY, String(metres));
+}
+
+/**
+ * Manual location override — stored in localStorage so it persists across page reloads.
+ * When set, getCurrentPosition() returns this immediately (no GPS call).
+ */
+export function getLocationOverride() {
+  try {
+    const raw = localStorage.getItem(LOC_OVERRIDE_KEY);
+    if (!raw) return null;
+    const parsed = JSON.parse(raw);
+    if (typeof parsed.lat === 'number' && typeof parsed.lng === 'number') return parsed;
+  } catch { /* ignore */ }
+  return null;
+}
+
+export function setLocationOverride(lat, lng, label = '') {
+  localStorage.setItem(LOC_OVERRIDE_KEY, JSON.stringify({ lat, lng, label }));
+}
+
+export function clearLocationOverride() {
+  localStorage.removeItem(LOC_OVERRIDE_KEY);
 }
 
 /**
@@ -255,6 +278,10 @@ async function runOverpassQuery(query) {
 // ── Public API ────────────────────────────────────────────────────────────────
 
 export function getCurrentPosition() {
+  // If the user has set a manual override, use it immediately.
+  const override = getLocationOverride();
+  if (override) return Promise.resolve({ lat: override.lat, lng: override.lng });
+
   return new Promise((resolve, reject) => {
     if (!('geolocation' in navigator)) {
       reject(new Error('Geolocation not supported'));
