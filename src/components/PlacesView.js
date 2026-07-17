@@ -216,7 +216,13 @@ export function mountPlacesView(container) {
         showToast(`📍 Found ${matched.length} task${matched.length !== 1 ? 's' : ''} for nearby shops: ${matched.map(t => `"${t.title}"`).join(', ')}`, 'success');
       }
     } catch (err) {
-      showToast('Could not fetch location coordinates.', 'error');
+      if (err?.code === 1) {
+        showToast('Location permission denied — enable it in browser settings.', 'error');
+      } else if (err?.name === 'OverpassError') {
+        showToast(`Map data unavailable: ${err.message}`, 'error');
+      } else {
+        showToast('Could not fetch your location. Please try again.', 'error');
+      }
     } finally {
       btn.innerHTML = '<i class="uil uil-navigation" style="margin-right:2px"></i> Check Location';
       btn.disabled = false;
@@ -266,8 +272,12 @@ export function mountPlacesView(container) {
         showToast(`${pt.label} nearby${namesStr}. ${relevant.length} task${relevant.length !== 1 ? 's' : ''} to do here!`, 'success');
       }
     } catch (err) {
-      if (err.code === 1) {
+      if (err?.code === 1) {
         showToast('Location permission denied — enable it in browser settings.', 'error');
+      } else if (err?.code === 2) {
+        showToast('Your position is unavailable right now. Try again outside.', 'error');
+      } else if (err?.name === 'OverpassError') {
+        showToast(`Map server busy — tried 2 endpoints. Try again in a moment.`, 'error');
       } else {
         showToast('Could not get location. Please try again.', 'error');
       }

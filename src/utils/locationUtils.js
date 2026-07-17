@@ -7,9 +7,15 @@
  * false positives. This version builds precise Overpass QL queries from tag descriptors.
  */
 
-const OVERPASS_URL     = 'https://overpass-api.de/api/interpreter';
-const RADIUS_KEY       = 'flowtask_loc_radius';
-const DEFAULT_RADIUS   = 2000; // metres
+// Primary + fallback Overpass endpoints. If the primary is busy the request is
+// retried once, then re-attempted on the mirror.
+const OVERPASS_ENDPOINTS = [
+  'https://overpass-api.de/api/interpreter',
+  'https://overpass.kumi.systems/api/interpreter',
+];
+const RADIUS_KEY     = 'flowtask_loc_radius';
+const DEFAULT_RADIUS = 2000; // metres
+const RETRY_DELAY_MS = 2000;
 
 export function getRadius() {
   const stored = parseInt(localStorage.getItem(RADIUS_KEY), 10);
@@ -160,12 +166,90 @@ function buildOverpassQuery(osmTags, lat, lng, radius = DEFAULT_RADIUS) {
   return `[out:json];\n(\n${nodes}\n);\nout;`;
 }
 
+/**
+ * Classify a raw Overpass response.
+ *
+ * The API can return three things:
+ *   1. HTTP 4xx/5xx  → hard error, no retry.
+ *   2. HTTP 200 + JSON  → success.
+ *   3. HTTP 200 + XML   → server busy / timeout (common on the free tier).
+ *      Body looks like: <p><strong>Error</strong>: runtime error … timeout.</p>
+ *
+ * We detect case 3 by checking the Content-Type header before calling .json().
+ */
+class OverpassError extends Error {
+  constructor(message, { busy = false } = {}) {
+    super(message);
+    this.name  = 'OverpassError';
+    this.busy  = busy; // true → safe to retry
+  }
+}
+
+function extractXmlError(text) {
+  // Pull the text inside <p>…</p> that follows the <strong>Error</strong> tag.
+  const match = text.match(/<strong[^>]*>Error<\/strong>\s*:\s*([^<]+)/i);
+  return match ? match[1].trim() : 'Overpass server error (unknown reason)';
+}
+
+async function tryFetch(url) {
+  const res = await fetch(url, { signal: AbortSignal.timeout(12000) });
+
+  if (!res.ok) {
+    throw new OverpassError(`Overpass HTTP ${res.status}`, { busy: res.status >= 500 });
+  }
+
+  const contentType = res.headers.get('content-type') ?? '';
+  const text = await res.text();
+
+  if (!contentType.includes('json') && (text.trimStart().startsWith('<') || text.trimStart().startsWith('<?'))) {
+    // Server returned XML → extract the human-readable reason.
+    const reason = extractXmlError(text);
+    const isBusy = /timeout|too busy|rate limit/i.test(reason);
+    throw new OverpassError(reason, { busy: isBusy });
+  }
+
+  try {
+    const data = JSON.parse(text);
+    return data.elements ?? [];
+  } catch {
+    throw new OverpassError('Overpass returned malformed JSON.');
+  }
+}
+
+async function sleep(ms) {
+  return new Promise(resolve => setTimeout(resolve, ms));
+}
+
+/**
+ * Run an Overpass query with:
+ *   - 1 automatic retry (after RETRY_DELAY_MS) on busy/timeout errors.
+ *   - Fallback to the secondary mirror endpoint if the retry also fails.
+ */
 async function runOverpassQuery(query) {
-  const url = `${OVERPASS_URL}?data=${encodeURIComponent(query)}`;
-  const res = await fetch(url);
-  if (!res.ok) throw new Error(`Overpass API error: ${res.status}`);
-  const data = await res.json();
-  return data.elements ?? [];
+  const endpoints = [...OVERPASS_ENDPOINTS];
+
+  for (let endpointIdx = 0; endpointIdx < endpoints.length; endpointIdx++) {
+    const url = `${endpoints[endpointIdx]}?data=${encodeURIComponent(query)}`;
+
+    for (let attempt = 0; attempt < 2; attempt++) {
+      try {
+        return await tryFetch(url);
+      } catch (err) {
+        const isLast = endpointIdx === endpoints.length - 1 && attempt === 1;
+
+        if (err instanceof OverpassError && err.busy && !isLast) {
+          // Wait before retrying (first attempt) or before trying mirror (second attempt).
+          await sleep(RETRY_DELAY_MS);
+          continue;
+        }
+
+        if (isLast) throw err; // propagate to caller after all options exhausted
+
+        // Non-busy error on a non-last endpoint: try mirror immediately.
+        break;
+      }
+    }
+  }
 }
 
 // ── Public API ────────────────────────────────────────────────────────────────
