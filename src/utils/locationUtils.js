@@ -277,6 +277,26 @@ async function runOverpassQuery(query) {
 
 // ── Public API ────────────────────────────────────────────────────────────────
 
+/**
+ * Reverse geocode a lat/lng into a short human-readable place name.
+ * Uses Nominatim — free, no API key required.
+ * Returns e.g. "Andheri West, Mumbai" or "Connaught Place, New Delhi".
+ */
+export async function reverseGeocode(lat, lng) {
+  const url = `https://nominatim.openstreetmap.org/reverse?lat=${lat}&lon=${lng}&format=json&zoom=14&addressdetails=1`;
+  const res  = await fetch(url, { headers: { 'Accept-Language': 'en' } });
+  if (!res.ok) throw new Error(`Nominatim ${res.status}`);
+  const data = await res.json();
+  const a    = data.address ?? {};
+  const local  = a.neighbourhood || a.suburb || a.quarter || a.village || a.town || null;
+  const city   = a.city || a.state_district || a.county || null;
+  const parts  = [local, city].filter(Boolean);
+  if (parts.length) return parts.join(', ');
+  // Fallback: first two comma-separated segments of display_name
+  return (data.display_name ?? '').split(',').slice(0, 2).join(',').trim()
+    || `${lat.toFixed(4)}, ${lng.toFixed(4)}`;
+}
+
 export function getCurrentPosition() {
   // If the user has set a manual override, use it immediately.
   const override = getLocationOverride();

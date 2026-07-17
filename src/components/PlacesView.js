@@ -2,13 +2,16 @@
  * PlacesView.js — Places + Item Locator tab (Tab 3 — Unicons Adapter)
  */
 import { store } from '../store/store.js';
-import { PLACE_TYPES, getPlaceType, getCurrentPosition, getNearbyPlaceTypes, getNearbyShopsForCategory, getRelevantTasks, getRadius, setRadius, getLocationOverride, setLocationOverride, clearLocationOverride } from '../utils/locationUtils.js';
+import { PLACE_TYPES, getPlaceType, getCurrentPosition, getNearbyPlaceTypes, getNearbyShopsForCategory, getRelevantTasks, getRadius, setRadius, getLocationOverride, setLocationOverride, clearLocationOverride, reverseGeocode } from '../utils/locationUtils.js';
 import { timeAgo } from '../utils/dateUtils.js';
 import { showToast, startLocationAlerts, stopLocationAlerts } from '../app.js';
 
 export function mountPlacesView(container) {
   // Persists nearby shop results across re-renders (store updates shouldn't wipe the list).
   const nearbyResults = new Map(); // typeId → { shops, checkedAt }
+
+  // GPS name resolution state — persists across re-renders so we don't re-fetch every time.
+  let gpsNameState = { status: 'idle', name: null }; // 'idle' | 'loading' | 'resolved' | 'error'
 
   function render() {
     const { tasks, items } = store.state;
@@ -75,6 +78,16 @@ export function mountPlacesView(container) {
     locBanner.querySelector('#check-location-btn').addEventListener('click', checkLocation);
     locBanner.querySelector('#location-alerts-toggle').addEventListener('change', toggleLocationAlerts);
     locBanner.querySelector('#loc-override-btn').addEventListener('click', () => showLocationOverrideModal(locBanner));
+    locBanner.querySelector('#loc-clear-btn')?.addEventListener('click', () => {
+      clearLocationOverride();
+      refreshLocSourceRow(locBanner);
+      showToast('Switched back to GPS', 'info');
+    });
+
+    // Kick off GPS name resolution if in auto mode and not yet resolved
+    if (!getLocationOverride() && gpsNameState.status === 'idle') {
+      resolveGpsName(locBanner);
+    }
 
     // Radius picker
     locBanner.querySelectorAll('.radius-pill').forEach(pill => {
@@ -374,44 +387,100 @@ export function mountPlacesView(container) {
     }
   }
 
-  // ── Location override helpers ──────────────────────────────────────────────
+  // ── Location source row ───────────────────────────────────────────────────────────────────────────────
 
   function buildLocSourceRow() {
     const ov = getLocationOverride();
     if (ov) {
       const coordStr = `${ov.lat.toFixed(4)}, ${ov.lng.toFixed(4)}`;
       return `
-        <div style="font-size:0.8125rem;color:var(--text-primary);display:flex;align-items:center;gap:6px;min-width:0">
-          <i class="uil uil-edit-alt" style="color:#fbbf24;flex-shrink:0"></i>
+        <div style="display:flex;align-items:center;gap:8px;min-width:0;flex:1">
+          <div style="width:32px;height:32px;border-radius:var(--r-md);background:rgba(245 158 11/0.12);display:flex;align-items:center;justify-content:center;flex-shrink:0">
+            <i class="uil uil-edit-alt" style="color:#fbbf24;font-size:1rem"></i>
+          </div>
           <div style="min-width:0">
-            <div style="font-weight:600;color:#fbbf24;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">
-              ${escHtml(ov.label || coordStr)}
-            </div>
-            <div style="font-size:0.7rem;color:var(--text-muted)">${coordStr} &middot; Manual override</div>
+            <div style="font-size:0.875rem;font-weight:700;color:#fbbf24;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${escHtml(ov.label || coordStr)}</div>
+            <div style="font-size:0.7rem;color:var(--text-muted);margin-top:1px">${coordStr} &middot; Manual pin</div>
           </div>
         </div>
         <div style="display:flex;gap:6px;flex-shrink:0">
-          <button id="loc-override-btn" style="padding:4px 10px;border-radius:var(--r-full);font-size:0.75rem;font-weight:600;cursor:pointer;border:1px solid rgba(245 158 11/0.25);background:rgba(245 158 11/0.08);color:#fbbf24">Edit</button>
+          <button id="loc-override-btn" style="padding:4px 10px;border-radius:var(--r-full);font-size:0.75rem;font-weight:600;cursor:pointer;border:1px solid rgba(245 158 11/0.25);background:rgba(245 158 11/0.08);color:#fbbf24">Change</button>
           <button id="loc-clear-btn" style="padding:4px 10px;border-radius:var(--r-full);font-size:0.75rem;font-weight:600;cursor:pointer;border:1px solid rgba(239 68 68/0.25);background:rgba(239 68 68/0.08);color:#f87171">Use GPS</button>
         </div>`;
     }
+
+    // GPS mode — show name based on resolution state
+    let nameHtml;
+    if (gpsNameState.status === 'resolved') {
+      nameHtml = `<div style="font-size:0.875rem;font-weight:700;color:var(--text-primary)">${escHtml(gpsNameState.name)}</div>
+                  <div style="font-size:0.7rem;color:var(--text-muted);margin-top:1px">GPS &middot; auto-detected</div>`;
+    } else if (gpsNameState.status === 'loading') {
+      nameHtml = `<div style="font-size:0.8rem;color:var(--text-secondary);display:flex;align-items:center;gap:6px">
+                    <i class="uil uil-spinner-alt" style="animation:spin 1s linear infinite"></i> Detecting location…
+                  </div>`;
+    } else if (gpsNameState.status === 'error') {
+      nameHtml = `<div style="font-size:0.8rem;color:var(--text-muted)">Could not detect &mdash; set manually</div>`;
+    } else {
+      nameHtml = `<div style="font-size:0.8rem;color:var(--text-muted)">GPS auto-detect</div>`;
+    }
+
     return `
-      <div style="font-size:0.8125rem;color:var(--text-primary);display:flex;align-items:center;gap:6px">
-        <i class="uil uil-signal" style="color:#fbbf24"></i>
-        <span>Your location: <strong style="color:#fbbf24">GPS auto-detect</strong></span>
+      <div style="display:flex;align-items:center;gap:8px;min-width:0;flex:1">
+        <div style="width:32px;height:32px;border-radius:var(--r-md);background:rgba(245 158 11/0.08);display:flex;align-items:center;justify-content:center;flex-shrink:0">
+          <i class="uil uil-signal" style="color:#fbbf24;font-size:1rem"></i>
+        </div>
+        <div style="min-width:0">${nameHtml}</div>
       </div>
-      <button id="loc-override-btn" style="padding:4px 12px;border-radius:var(--r-full);font-size:0.75rem;font-weight:600;cursor:pointer;border:1px solid rgba(245 158 11/0.2);background:transparent;color:var(--text-secondary)">Set manually</button>`;
+      <button id="loc-override-btn" style="padding:4px 12px;border-radius:var(--r-full);font-size:0.75rem;font-weight:600;cursor:pointer;border:1px solid rgba(245 158 11/0.2);background:transparent;color:var(--text-secondary);white-space:nowrap">Set location</button>`;
   }
 
   function refreshLocSourceRow(locBanner) {
-    const row = locBanner.querySelector('#loc-source-row');
+    const row = locBanner?.querySelector?.('#loc-source-row')
+              ?? container.querySelector('#loc-source-row');
     if (!row) return;
     row.innerHTML = buildLocSourceRow();
-    row.querySelector('#loc-override-btn')?.addEventListener('click', () => showLocationOverrideModal(locBanner));
+    row.querySelector('#loc-override-btn')?.addEventListener('click', () => showLocationOverrideModal(locBanner ?? container.querySelector('.loc-banner')));
     row.querySelector('#loc-clear-btn')?.addEventListener('click', () => {
       clearLocationOverride();
+      // Reset GPS name so it re-detects
+      gpsNameState = { status: 'idle', name: null };
       refreshLocSourceRow(locBanner);
-      showToast('Switched back to GPS auto-detect', 'info');
+      // Kick off new detection
+      const banner = container.querySelector('[id="loc-source-row"]')?.closest('[style]');
+      resolveGpsName(null);
+      showToast('Switched back to GPS', 'info');
+    });
+  }
+
+  async function resolveGpsName(locBanner) {
+    if (gpsNameState.status === 'loading' || gpsNameState.status === 'resolved') return;
+    gpsNameState = { status: 'loading', name: null };
+    refreshLocSourceRow(locBanner);
+
+    try {
+      const { lat, lng } = await getCurrentPosition();
+      const name = await reverseGeocode(lat, lng);
+      gpsNameState = { status: 'resolved', name };
+    } catch {
+      gpsNameState = { status: 'error', name: null };
+    }
+    refreshLocSourceRow(locBanner);
+  }
+
+  // ── Location override modal ────────────────────────────────────────────────────────────────────
+
+  function loadLeaflet() {
+    if (window.L) return Promise.resolve();
+    return new Promise((resolve, reject) => {
+      const link   = document.createElement('link');
+      link.rel     = 'stylesheet';
+      link.href    = 'https://unpkg.com/leaflet@1.9.4/dist/leaflet.css';
+      document.head.appendChild(link);
+      const script  = document.createElement('script');
+      script.src    = 'https://unpkg.com/leaflet@1.9.4/dist/leaflet.js';
+      script.onload = resolve;
+      script.onerror = () => reject(new Error('Leaflet failed to load'));
+      document.head.appendChild(script);
     });
   }
 
@@ -419,40 +488,63 @@ export function mountPlacesView(container) {
     const backdrop = document.createElement('div');
     backdrop.className = 'modal-backdrop';
     backdrop.innerHTML = `
-      <div class="modal" style="border-radius:var(--r-xl);max-width:480px">
+      <div class="modal" style="border-radius:var(--r-xl);max-width:500px">
         <div class="modal-handle"></div>
         <div class="modal-header">
-          <h2 class="modal-title"><i class="uil uil-map-marker" style="color:var(--accent)"></i> Set Your Location</h2>
+          <h2 class="modal-title"><i class="uil uil-crosshair" style="color:var(--accent)"></i> Set Your Location</h2>
           <button class="modal-close" id="lom-close">&#10005;</button>
         </div>
-        <div class="modal-body">
-          <p style="font-size:0.8125rem;color:var(--text-secondary);margin-bottom:14px">
-            Search for an address or place name. The result will be used for all location checks instead of GPS.
-          </p>
-          <div style="display:flex;gap:8px;margin-bottom:12px">
-            <input class="form-input" id="lom-query" type="text"
-              placeholder="e.g. Bandra, Mumbai or CP, New Delhi"
-              style="flex:1" autocomplete="off" />
-            <button class="btn btn-primary" id="lom-search" style="flex-shrink:0">
-              <i class="uil uil-search"></i> Search
+        <div class="modal-body" style="padding-top:0">
+          <!-- Tabs -->
+          <div style="display:flex;gap:0;border-bottom:1px solid var(--border);margin-bottom:16px">
+            <button id="lom-tab-search" class="lom-tab lom-tab--active"
+              style="flex:1;padding:10px;font-size:0.8125rem;font-weight:600;border:none;background:transparent;color:#fbbf24;border-bottom:2px solid #fbbf24;cursor:pointer;transition:all 0.15s">
+              <i class="uil uil-search"></i> Search address
+            </button>
+            <button id="lom-tab-map" class="lom-tab"
+              style="flex:1;padding:10px;font-size:0.8125rem;font-weight:600;border:none;background:transparent;color:var(--text-secondary);border-bottom:2px solid transparent;cursor:pointer;transition:all 0.15s">
+              <i class="uil uil-map"></i> Pick from map
             </button>
           </div>
-          <div id="lom-results" style="display:flex;flex-direction:column;gap:6px;max-height:260px;overflow-y:auto"></div>
-          <div id="lom-status" style="font-size:0.8rem;color:var(--text-muted);padding:4px 0"></div>
-          <div class="modal-footer" style="margin-top:14px">
+          <!-- Search panel -->
+          <div id="lom-panel-search">
+            <div style="display:flex;gap:8px;margin-bottom:10px">
+              <input class="form-input" id="lom-query" type="text"
+                placeholder="e.g. Andheri West, Mumbai"
+                style="flex:1" autocomplete="off" />
+              <button class="btn btn-primary" id="lom-search" style="flex-shrink:0">
+                <i class="uil uil-search"></i>
+              </button>
+            </div>
+            <div id="lom-results" style="display:flex;flex-direction:column;gap:6px;max-height:240px;overflow-y:auto"></div>
+            <div id="lom-status" style="font-size:0.78rem;color:var(--text-muted);padding:4px 0"></div>
+          </div>
+          <!-- Map panel -->
+          <div id="lom-panel-map" style="display:none">
+            <div id="lom-map" style="height:240px;border-radius:var(--r-md);overflow:hidden;border:1px solid var(--border);position:relative">
+              <div id="lom-map-loading" style="position:absolute;inset:0;display:flex;align-items:center;justify-content:center;background:var(--bg-card);z-index:10;gap:8px;font-size:0.875rem;color:var(--text-secondary)">
+                <i class="uil uil-spinner-alt" style="animation:spin 1s linear infinite"></i> Loading map…
+              </div>
+            </div>
+            <div id="lom-map-addr" style="margin-top:8px;font-size:0.8rem;color:var(--text-secondary);min-height:1.4em;display:flex;align-items:center;gap:6px">
+              <i class="uil uil-map-pin" style="color:#fbbf24"></i>
+              <span id="lom-map-addr-text">Click anywhere on the map to pin your location</span>
+            </div>
+          </div>
+          <!-- Footer -->
+          <div class="modal-footer" style="margin-top:16px">
             <button class="btn btn-ghost" id="lom-cancel">Cancel</button>
+            <button id="lom-confirm-map" class="btn btn-primary" style="display:none">
+              <i class="uil uil-check"></i> Use this location
+            </button>
             <button class="btn" id="lom-use-gps"
               style="background:rgba(99 102 241/0.1);color:#818cf8;border:1px solid rgba(99 102 241/0.2)">
-              <i class="uil uil-signal"></i> Use GPS instead
+              <i class="uil uil-signal"></i> Use GPS
             </button>
           </div>
         </div>
       </div>`;
     document.body.appendChild(backdrop);
-
-    const queryInput = backdrop.querySelector('#lom-query');
-    const resultsEl  = backdrop.querySelector('#lom-results');
-    const statusEl   = backdrop.querySelector('#lom-status');
 
     function close() { backdrop.remove(); }
     backdrop.querySelector('#lom-close').onclick  = close;
@@ -461,10 +553,137 @@ export function mountPlacesView(container) {
 
     backdrop.querySelector('#lom-use-gps').onclick = () => {
       clearLocationOverride();
+      gpsNameState = { status: 'idle', name: null };
       refreshLocSourceRow(locBanner);
-      showToast('Switched back to GPS auto-detect', 'info');
+      resolveGpsName(locBanner);
+      showToast('Switched back to GPS', 'info');
       close();
     };
+
+    // ── Tab switching ───────────────────────────────────────────────────────────────────
+    let mapInitialized = false;
+    let pendingPin = null; // { lat, lng, name }
+
+    function setActiveTab(tab) {
+      const searchTab = backdrop.querySelector('#lom-tab-search');
+      const mapTab    = backdrop.querySelector('#lom-tab-map');
+      const panelS    = backdrop.querySelector('#lom-panel-search');
+      const panelM    = backdrop.querySelector('#lom-panel-map');
+      const confirmBtn = backdrop.querySelector('#lom-confirm-map');
+
+      const isSearch = tab === 'search';
+      searchTab.style.color       = isSearch ? '#fbbf24' : 'var(--text-secondary)';
+      searchTab.style.borderBottom = isSearch ? '2px solid #fbbf24' : '2px solid transparent';
+      mapTab.style.color          = !isSearch ? '#fbbf24' : 'var(--text-secondary)';
+      mapTab.style.borderBottom   = !isSearch ? '2px solid #fbbf24' : '2px solid transparent';
+      panelS.style.display  = isSearch ? '' : 'none';
+      panelM.style.display  = !isSearch ? '' : 'none';
+      confirmBtn.style.display = (!isSearch && pendingPin) ? '' : 'none';
+
+      if (!isSearch && !mapInitialized) initMap();
+    }
+
+    backdrop.querySelector('#lom-tab-search').onclick = () => setActiveTab('search');
+    backdrop.querySelector('#lom-tab-map').onclick    = () => setActiveTab('map');
+
+    // ── Map tab ────────────────────────────────────────────────────────────────────────
+    async function initMap() {
+      mapInitialized = true;
+      try {
+        await loadLeaflet();
+      } catch {
+        backdrop.querySelector('#lom-map-loading').textContent = 'Map failed to load. Check connection.';
+        return;
+      }
+
+      const L = window.L;
+      // Get starting position: override > GPS > India center
+      const ov = getLocationOverride();
+      let startLat = ov?.lat ?? 20.5937;
+      let startLng = ov?.lng ?? 78.9629;
+      let startZoom = ov ? 14 : 5;
+
+      // Try to get actual GPS for a better default
+      try {
+        const pos = await getCurrentPosition();
+        startLat = pos.lat; startLng = pos.lng; startZoom = 14;
+      } catch { /* GPS blocked — use override or default */ }
+
+      backdrop.querySelector('#lom-map-loading').style.display = 'none';
+
+      const map = L.map('lom-map', { zoomControl: true }).setView([startLat, startLng], startZoom);
+
+      L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+        attribution: '© <a href="https://www.openstreetmap.org/copyright">OSM</a>',
+        maxZoom: 19,
+      }).addTo(map);
+
+      // Custom amber div-icon (avoids Leaflet default-icon path issues in Vite)
+      const pinIcon = L.divIcon({
+        html: '<i class="uil uil-map-marker" style="font-size:28px;color:#fbbf24;filter:drop-shadow(0 2px 4px rgba(0,0,0,0.5))"></i>',
+        iconSize: [28, 28],
+        iconAnchor: [14, 28],
+        className: '',
+      });
+
+      let marker = null;
+      if (ov) {
+        marker = L.marker([ov.lat, ov.lng], { icon: pinIcon, draggable: true }).addTo(map);
+        pendingPin = { lat: ov.lat, lng: ov.lng, name: ov.label };
+        backdrop.querySelector('#lom-confirm-map').style.display = '';
+      }
+
+      async function handlePick(lat, lng) {
+        const addrEl = backdrop.querySelector('#lom-map-addr-text');
+        addrEl.textContent = 'Resolving address…';
+        pendingPin = { lat, lng, name: null };
+        backdrop.querySelector('#lom-confirm-map').style.display = '';
+        try {
+          const name = await reverseGeocode(lat, lng);
+          pendingPin.name = name;
+          addrEl.textContent = name;
+        } catch {
+          addrEl.textContent = `${lat.toFixed(5)}, ${lng.toFixed(5)}`;
+          pendingPin.name = `${lat.toFixed(4)}, ${lng.toFixed(4)}`;
+        }
+      }
+
+      map.on('click', e => {
+        const { lat, lng } = e.latlng;
+        if (marker) marker.setLatLng([lat, lng]);
+        else marker = L.marker([lat, lng], { icon: pinIcon, draggable: true }).addTo(map);
+        marker.off('dragend');
+        marker.on('dragend', ev => {
+          const { lat: dLat, lng: dLng } = ev.target.getLatLng();
+          handlePick(dLat, dLng);
+        });
+        handlePick(lat, lng);
+      });
+
+      if (marker && ov) {
+        marker.on('dragend', ev => {
+          const { lat, lng } = ev.target.getLatLng();
+          handlePick(lat, lng);
+        });
+        if (ov.label) backdrop.querySelector('#lom-map-addr-text').textContent = ov.label;
+      }
+
+      // Leaflet needs this after the container becomes visible
+      setTimeout(() => map.invalidateSize(), 120);
+    }
+
+    backdrop.querySelector('#lom-confirm-map').onclick = () => {
+      if (!pendingPin) return;
+      setLocationOverride(pendingPin.lat, pendingPin.lng, pendingPin.name || '');
+      refreshLocSourceRow(locBanner);
+      showToast(`Location set to ${pendingPin.name || 'pinned location'}`, 'success');
+      close();
+    };
+
+    // ── Search tab ─────────────────────────────────────────────────────────────────────────
+    const queryInput = backdrop.querySelector('#lom-query');
+    const resultsEl  = backdrop.querySelector('#lom-results');
+    const statusEl   = backdrop.querySelector('#lom-status');
 
     async function doSearch() {
       const q = queryInput.value.trim();
@@ -472,30 +691,22 @@ export function mountPlacesView(container) {
       statusEl.textContent = 'Searching…';
       resultsEl.innerHTML  = '';
       backdrop.querySelector('#lom-search').disabled = true;
-
       try {
         const url  = `https://nominatim.openstreetmap.org/search?q=${encodeURIComponent(q)}&format=json&limit=6&addressdetails=1`;
         const res  = await fetch(url, { headers: { 'Accept-Language': 'en' } });
         const data = await res.json();
-
-        if (!data.length) {
-          statusEl.textContent = 'No results found. Try a different term.';
-          return;
-        }
-        statusEl.textContent = `${data.length} result${data.length !== 1 ? 's' : ''} found:`;
-
+        if (!data.length) { statusEl.textContent = 'No results. Try a different term.'; return; }
+        statusEl.textContent = '';
         data.forEach(place => {
           const lat  = parseFloat(place.lat);
           const lng  = parseFloat(place.lon);
-          const name = place.display_name;
-          const shortName = name.split(',').slice(0, 3).join(',').trim();
-
+          const shortName = place.display_name.split(',').slice(0, 3).join(',').trim();
           const item = document.createElement('button');
-          item.style.cssText = 'display:flex;flex-direction:column;align-items:flex-start;gap:2px;padding:10px 12px;border-radius:var(--r-md);background:rgba(255 255 255/0.03);border:1px solid var(--border);cursor:pointer;text-align:left;width:100%;transition:background 0.15s';
+          item.style.cssText = 'display:flex;flex-direction:column;align-items:flex-start;gap:3px;padding:10px 12px;border-radius:var(--r-md);background:rgba(255 255 255/0.03);border:1px solid var(--border);cursor:pointer;text-align:left;width:100%;transition:all 0.15s';
           item.innerHTML = `
             <span style="font-size:0.875rem;font-weight:600;color:var(--text-primary)">${escHtml(shortName)}</span>
             <span style="font-size:0.7rem;color:var(--text-muted)">${lat.toFixed(5)}, ${lng.toFixed(5)}</span>`;
-          item.onmouseenter = () => item.style.background = 'rgba(245 158 11/0.08)';
+          item.onmouseenter = () => item.style.background = 'rgba(245 158 11/0.1)';
           item.onmouseleave = () => item.style.background = 'rgba(255 255 255/0.03)';
           item.onclick = () => {
             setLocationOverride(lat, lng, shortName);
@@ -505,8 +716,8 @@ export function mountPlacesView(container) {
           };
           resultsEl.appendChild(item);
         });
-      } catch (err) {
-        statusEl.textContent = 'Search failed. Check your connection and try again.';
+      } catch {
+        statusEl.textContent = 'Search failed. Check connection.';
       } finally {
         backdrop.querySelector('#lom-search').disabled = false;
       }
