@@ -10,7 +10,7 @@ Left unconstrained, generated UI converges on the same defaults: purple-to-blue 
 
 ## Step 0 — Declare a direction before writing any CSS
 Before touching code, pick and state, in one line (as a comment at the top of the stylesheet or in your response):
-`aesthetic: <name> · layout: <name> · motion: <name> · reference: <real product>`
+`aesthetic: <name> · layout: <name> · motion: <name> · palette: <name> · reference: <real product>`
 Never skip this. If the brief doesn't imply an aesthetic, default to whichever below fits the content best — never to "clean modern SaaS" as a non-choice.
 
 ---
@@ -59,16 +59,22 @@ Never skip this. If the brief doesn't imply an aesthetic, default to whichever b
 - **Breadcrumbs**: subtle, small, muted — last item isn't a link; add schema.org `BreadcrumbList` for SEO.
 - **Dot navigation**: only pair with full-page scroll-snap layouts, not regular scrolling pages.
 
-## 5. Typography & color
+## 5. Typography
 - Never default to Inter/Roboto/system-ui without deciding. Pick a pairing on purpose:
   - Editorial/luxury: serif display (Fraunces, Playfair) + grounded sans body (Public Sans, DM Sans)
   - Modern startup: geometric display (Space Grotesk, Clash Display) + Satoshi/General Sans body
   - Technical/tool: two disciplined grotesques, different weights doing the hierarchy work
 - Build a real type scale with `clamp(min, fluid-vw, max)`, not fixed px per breakpoint. Tight negative letter-spacing (`-0.02em` to `-0.05em`) on large display text.
-- Color via the 60-30-10 rule: 60% dominant neutral, 30% secondary surface tone, 10% accent — and the accent appears *only* on CTAs/highlights/active states, never decoratively.
 - Gradient text (`background-clip: text` + transparent fill) is a nice accent on 1-2 words — don't apply it to entire headlines or it stops meaning anything.
 
-## 6. Icon packs
+## 6. Color
+Apply the 60-30-10 rule as a baseline: 60% dominant neutral, 30% secondary surface tone, 10% accent — the accent appears *only* on CTAs/highlights/active states, never decoratively.
+
+For the actual palette — hex values, harmony type, psychology, and accessibility contrast math — don't improvise inline. Load:
+- **`references/color-systems.md`** — use-case-indexed palettes (SaaS, fintech, e-commerce, health/wellness, food, kids, luxury, creative, gaming, travel, eco). Start here when the project's domain is known.
+- **`references/color-theory-reference.md`** — full theory (hue/saturation/lightness, harmony formulas, color psychology table) plus a 60-palette library organized by harmony type (monochromatic, analogous, complementary, split-complementary, triadic, neutral, pastel, vibrant, dark-mode). Use this to pick a variant or verify contrast ratios before shipping.
+
+## 7. Icon packs
 Pick **one pack per project** and never mix packs or mix filled/outline styles within the same view. Define `--icon-size-sm/md/lg` tokens and apply consistently.
 
 | Pack | Style | Install | Best for |
@@ -78,14 +84,15 @@ Pick **one pack per project** and never mix packs or mix filled/outline styles w
 | **Remixicon** | Line + fill *pairs* per icon (`RiHomeLine` / `RiHomeFill`) | `npm i remixicon-react` (or the `remixicon` webfont/CSS) | Needing an active/inactive state pair from the same glyph — nav items, toggles |
 | **Clickons** | 500 icons, 17 categories, fill + stroke, minimalist | No maintained npm package — distributed as SVG/Figma assets via Craftwork Design (craftwork.design/product/clickons); self-host the SVGs you need | Wanting a distinctive, less-seen mark when you're deliberately avoiding the Lucide-everywhere look |
 
-## 7. Anti-pattern blacklist — never do these unless explicitly requested
+## 8. Anti-pattern blacklist — never do these unless explicitly requested
 - Purple→blue gradient hero background as an unexamined default
 - Uniform `border-radius` value applied to literally every element
 - Reflexive 3-column "icon circle, bold title, gray paragraph" feature grid regardless of whether content has 3 parallel items
 - Glassmorphism / frosted blur used decoratively rather than deliberately
 - Centered hero + gradient text + blurred blob shapes in the background
 - Generic testimonial cards: 5 gold stars + initials-in-a-circle avatar + no real specificity in the quote
-- Lucide icons reached for on autopilot rather than as a deliberate choice (see §6)
+- Lucide icons reached for on autopilot rather than as a deliberate choice (see §7)
+- Picking a color accent by gut feel instead of checking §6's reference files — an ungrounded accent is how "generic SaaS blue" happens
 
-## 8. Pre-flight checklist
-Before shipping any UI, confirm: named reference product · chosen aesthetic · chosen layout · chosen motion approach · font pairing · single icon pack · nothing from the blacklist crept in.
+## 9. Pre-flight checklist
+Before shipping any UI, confirm: named reference product · chosen aesthetic · chosen layout · chosen motion approach · font pairing · chosen palette (with contrast verified) · single icon pack · nothing from the blacklist crept in.

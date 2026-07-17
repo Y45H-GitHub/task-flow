@@ -16,8 +16,13 @@
 }
 
 @keyframes fade-backdrop {
-  from { opacity: 0; }
-  to   { opacity: 1; }
+  from {
+    opacity: 0;
+  }
+
+  to {
+    opacity: 1;
+  }
 }
 
 .modal {
@@ -34,8 +39,15 @@
 }
 
 @keyframes modal-slide-up {
-  from { transform: translateY(100%); opacity: 0.5; }
-  to   { transform: translateY(0); opacity: 1; }
+  from {
+    transform: translateY(100%);
+    opacity: 0.5;
+  }
+
+  to {
+    transform: translateY(0);
+    opacity: 1;
+  }
 }
 
 .modal-handle {
@@ -55,8 +67,10 @@
 }
 
 .modal-title {
+  font-family: 'Space Grotesk', 'Inter', system-ui, sans-serif;
   font-size: 1.125rem;
   font-weight: 700;
+  letter-spacing: -0.02em;
   color: var(--text-primary);
 }
 
@@ -74,6 +88,7 @@
   justify-content: center;
   transition: all var(--t-fast);
 }
+
 .modal-close:hover {
   background: var(--bg-card-hover);
   color: var(--text-primary);
@@ -92,7 +107,9 @@
 }
 
 @media (max-width: 480px) {
-  .form-row { grid-template-columns: 1fr; }
+  .form-row {
+    grid-template-columns: 1fr;
+  }
 }
 
 .modal-footer {
@@ -117,6 +134,7 @@
   cursor: pointer;
   transition: all var(--t-fast);
 }
+
 .person-color-swatch.selected {
   border-color: white;
   transform: scale(1.15);

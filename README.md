@@ -67,9 +67,9 @@ npm run preview
 ---
 
 ## 🎨 Design System
-- **Dark mode** — deep navy (`#0d0f1a`) background
-- **Accent** — indigo-violet gradient (`#6366f1 → #8b5cf6`)
-- **Typography** — Inter (Google Fonts)
+- **Dark mode** — deep navy (`#0B1120`) background
+- **Accent** — sky cyan (`#38BDF8`) — single accent, used only on CTAs/highlights/active states
+- **Typography** — Space Grotesk (headings) + Inter (body)
 - **Glassmorphism** cards with `backdrop-filter: blur`
 - **Priority colors** — P1=🔴 P2=🟠 P3=🔵 P4=⚪
 - **Micro-animations** — slide-in cards, modal bottom-sheet, tab transitions

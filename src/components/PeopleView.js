@@ -121,7 +121,7 @@ export function mountPeopleView(container) {
   }
 
   function showAddPersonModal() {
-    const colors = ['#6366f1','#ec4899','#3b82f6','#22c55e','#f97316','#a855f7','#14b8a6','#f59e0b','#ef4444','#64748b'];
+    const colors = ['#38BDF8', '#ec4899', '#3b82f6', '#22c55e', '#f97316', '#a855f7', '#14b8a6', '#f59e0b', '#ef4444', '#64748b'];
     let selectedColor = colors[0];
 
     const backdrop = document.createElement('div');

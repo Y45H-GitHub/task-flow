@@ -6,11 +6,11 @@
 const KEY = 'flowtask_data_v2';
 
 const DEFAULT_PEOPLE = [
-  { id: 'self',  name: 'Self', color: '#6366f1' },
-  { id: 'kj',   name: 'KJ',   color: '#ec4899' },
-  { id: 'aj',   name: 'AJ',   color: '#3b82f6' },
-  { id: 'plj',  name: 'PLJ',  color: '#22c55e' },
-  { id: 'hj',   name: 'HJ',   color: '#f97316' },
+  { id: 'self', name: 'Self', color: '#38BDF8' },
+  { id: 'kj', name: 'KJ', color: '#ec4899' },
+  { id: 'aj', name: 'AJ', color: '#3b82f6' },
+  { id: 'plj', name: 'PLJ', color: '#22c55e' },
+  { id: 'hj', name: 'HJ', color: '#f97316' },
 ];
 
 const DEFAULT_STATE = {

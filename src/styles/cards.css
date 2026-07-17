@@ -30,15 +30,17 @@
   transition: all var(--t-fast);
   white-space: nowrap;
 }
+
 .filter-chip:hover {
   border-color: var(--border-hover);
   color: var(--text-primary);
   background: rgba(255 255 255 / 0.02);
 }
+
 .filter-chip.active {
   background: var(--accent-light);
   border-color: var(--border-accent);
-  color: #818cf8;
+  color: var(--accent);
 }
 
 .tasks-sort-row {
@@ -66,8 +68,17 @@
   cursor: pointer;
   transition: all var(--t-fast);
 }
-.sort-btn:hover { color: var(--text-secondary); border-color: var(--border-hover); }
-.sort-btn.active { color: #818cf8; border-color: var(--border-accent); background: var(--accent-light); }
+
+.sort-btn:hover {
+  color: var(--text-secondary);
+  border-color: var(--border-hover);
+}
+
+.sort-btn.active {
+  color: var(--accent);
+  border-color: var(--border-accent);
+  background: var(--accent-light);
+}
 
 .jump-btns {
   display: flex;
@@ -113,10 +124,21 @@
   border-radius: var(--r-sm) 0 0 var(--r-sm);
 }
 
-.task-card[data-priority="P1"]::before { background: var(--p1); }
-.task-card[data-priority="P2"]::before { background: var(--p2); }
-.task-card[data-priority="P3"]::before { background: var(--p3); }
-.task-card[data-priority="P4"]::before { background: var(--p4); }
+.task-card[data-priority="P1"]::before {
+  background: var(--p1);
+}
+
+.task-card[data-priority="P2"]::before {
+  background: var(--p2);
+}
+
+.task-card[data-priority="P3"]::before {
+  background: var(--p3);
+}
+
+.task-card[data-priority="P4"]::before {
+  background: var(--p4);
+}
 
 .task-card:hover {
   background: var(--bg-card-hover);
@@ -128,6 +150,7 @@
 .task-card.done {
   opacity: 0.5;
 }
+
 .task-card.done .task-title {
   text-decoration: line-through;
   color: var(--text-muted);
@@ -136,6 +159,7 @@
 .task-card.overdue {
   border-color: rgba(239, 68, 68, 0.25);
 }
+
 .task-card.overdue::after {
   content: '';
   position: absolute;
@@ -161,11 +185,13 @@
   font-size: 0.8125rem;
   background: transparent;
 }
+
 .task-check:hover {
   border-color: var(--accent);
   background: var(--accent-light);
   color: var(--accent);
 }
+
 .task-card.done .task-check {
   background: var(--status-done);
   border-color: var(--status-done);
@@ -173,7 +199,13 @@
 }
 
 /* Body */
-.task-body { flex: 1; min-width: 0; display: flex; flex-direction: column; gap: var(--sp-2); }
+.task-body {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  gap: var(--sp-2);
+}
 
 .task-title-row {
   display: flex;
@@ -230,7 +262,9 @@
   font-weight: 500;
 }
 
-.task-meta-item .icon { font-size: 0.875rem; }
+.task-meta-item .icon {
+  font-size: 0.875rem;
+}
 
 .task-due-overdue {
   color: #f87171 !important;
@@ -271,10 +305,12 @@
   justify-content: center;
   transition: all var(--t-fast);
 }
+
 .task-action-btn:hover {
   background: rgba(255, 255, 255, 0.03);
   color: var(--text-primary);
 }
+
 .task-action-btn.delete:hover {
   background: rgba(239 68 68 / 0.12);
   color: #f87171;
@@ -315,9 +351,9 @@
   border-radius: var(--r-full);
   font-size: 0.6875rem;
   font-weight: 700;
-  background: rgba(79 70 229 / 0.06);
-  color: #818cf8;
-  border: 1px solid rgba(79 70 229 / 0.12);
+  background: rgba(56 189 248 / 0.08);
+  color: var(--accent);
+  border: 1px solid rgba(56 189 248 / 0.15);
 }
 
 /* ── Search Toolbar Row ── */
@@ -326,10 +362,12 @@
   gap: var(--sp-2);
   width: 100%;
 }
+
 .tasks-search-wrap {
   position: relative;
   flex: 1;
 }
+
 .tasks-search-icon {
   position: absolute;
   left: 14px;
@@ -339,6 +377,7 @@
   font-size: 1.125rem;
   pointer-events: none;
 }
+
 .tasks-search-wrap .form-input {
   padding-left: 40px;
 }
@@ -347,9 +386,11 @@
 .star-btn i {
   transition: transform var(--t-fast);
 }
+
 .star-btn.starred i {
   color: #fbbf24;
 }
+
 .star-btn:hover i {
   transform: scale(1.15);
 }
@@ -390,7 +431,7 @@
 
 .subtask-progress-bar-fill {
   height: 100%;
-  background: linear-gradient(90deg, var(--accent), var(--accent-2));
+  background: var(--accent);
   border-radius: var(--r-full);
   transition: width var(--t-base);
 }
@@ -543,7 +584,7 @@
   margin-top: var(--sp-2);
   padding: var(--sp-2) var(--sp-3);
   border-left: 2px solid var(--accent);
-  background: rgba(79, 70, 229, 0.02);
+  background: rgba(56, 189, 248, 0.03);
   border-radius: 0 var(--r-sm) var(--r-sm) 0;
 }
 

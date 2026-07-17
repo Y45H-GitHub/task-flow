@@ -10,18 +10,18 @@ export function mountMoreView(container) {
   function render() {
     const { tasks, logs, items, people } = store.state;
 
-    const total    = tasks.length;
-    const pending  = tasks.filter(t => t.status !== 'done').length;
-    const done     = tasks.filter(t => t.status === 'done').length;
-    const overdue  = tasks.filter(t => isOverdue(t.dueDate, t.status)).length;
-    const withLoc  = tasks.filter(t => t.locationTrigger && t.status !== 'done').length;
+    const total = tasks.length;
+    const pending = tasks.filter(t => t.status !== 'done').length;
+    const done = tasks.filter(t => t.status === 'done').length;
+    const overdue = tasks.filter(t => isOverdue(t.dueDate, t.status)).length;
+    const withLoc = tasks.filter(t => t.locationTrigger && t.status !== 'done').length;
     const logCount = logs.length;
 
     container.innerHTML = `
       <!-- Stats (Adapts to single line on desktop) -->
       <div class="stats-grid animate-in">
         <div class="stat-card">
-          <div class="stat-value" style="color:#818cf8">${total}</div>
+          <div class="stat-value" style="color:var(--accent)">${total}</div>
           <div class="stat-label">Total Tasks</div>
         </div>
         <div class="stat-card">
@@ -41,7 +41,7 @@ export function mountMoreView(container) {
           <div class="stat-label">📍 Location</div>
         </div>
         <div class="stat-card">
-          <div class="stat-value" style="color:#a78bfa">${logCount}</div>
+          <div class="stat-value" style="color:var(--accent)">${logCount}</div>
           <div class="stat-label">Logs</div>
         </div>
       </div>
@@ -62,7 +62,7 @@ export function mountMoreView(container) {
           </div>
 
           <div class="more-item" id="copy-pending">
-            <div class="more-item-icon" style="background:rgba(79, 70, 229, 0.08);color:#818cf8"><i class="uil uil-copy"></i></div>
+            <div class="more-item-icon" style="background:rgba(56, 189, 248, 0.08);color:var(--accent)"><i class="uil uil-copy"></i></div>
             <div class="more-item-text">
               <div class="more-item-title">Copy Pending List</div>
               <div class="more-item-sub">Copy ${pending} pending tasks to paste in WhatsApp</div>
@@ -94,7 +94,7 @@ export function mountMoreView(container) {
           </div>
 
           <div class="more-item" id="import-json">
-            <div class="more-item-icon" style="background:rgba(124, 58, 237, 0.08);color:#8b5cf6"><i class="uil uil-import"></i></div>
+            <div class="more-item-icon" style="background:rgba(56, 189, 248, 0.08);color:var(--accent)"><i class="uil uil-import"></i></div>
             <div class="more-item-text">
               <div class="more-item-title">Import Backup</div>
               <div class="more-item-sub">Restore tasks, logs, and items from JSON backup</div>
@@ -178,9 +178,9 @@ export function mountMoreView(container) {
           if (!data.tasks || !data.people) throw new Error('Invalid backup');
           if (confirm('This will replace all current data. Continue?')) {
             store.update(s => {
-              s.tasks  = data.tasks  || [];
-              s.logs   = data.logs   || [];
-              s.items  = data.items  || [];
+              s.tasks = data.tasks || [];
+              s.logs = data.logs || [];
+              s.items = data.items || [];
               s.people = data.people || [];
             });
             showToast('✅ Data restored!', 'success');
