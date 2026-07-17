@@ -40,3 +40,8 @@ Format follows [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 ## [1.0.0] — (prototype, not committed)
 
 - Initial FlowTask concept with basic task CRUD
+- real time updates of taks as per location, as i move i must get a notifcation of the tasks that were in my todos accd to the location . ye saman lene ka tha, lia ki nhi ? 
+
+- possibilty of infinite sub tasks (also the ui) 
+
+- ality to check and uncheck the tasks at once
