@@ -45,3 +45,11 @@ Format follows [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 - possibilty of infinite sub tasks (also the ui) 
 
 - ality to check and uncheck the tasks at once
+
+Infinite sub tasks not getting marked completed when main parent task marked completed  in 2nd layer 
+
+Add a task instead of step the name should be 
+The dates on subscript are not coming when we r enetring a fresh task (should come for all main task to any task )
+The cards or list need to be 
+
+Crollability all the sides , carda 
